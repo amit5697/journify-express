@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import RatingSelector from './RatingSelector';
 import { JournalEntry, useJournalStore } from '@/utils/journalStore';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 interface JournalFormProps {
   entryId?: string;
