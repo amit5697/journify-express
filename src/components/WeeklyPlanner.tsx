@@ -38,11 +38,10 @@ const WeeklyPlanner: React.FC = () => {
       };
       
       const newPlanId = addWeeklyPlan(newPlan);
-      const createdPlan = weeklyPlans.find((plan) => plan.id === newPlanId) || {
+      setWeekPlan({
         id: newPlanId,
         ...newPlan
-      };
-      setWeekPlan(createdPlan);
+      });
     }
   }, [currentWeek, weeklyPlans, addWeeklyPlan]);
   
@@ -74,10 +73,16 @@ const WeeklyPlanner: React.FC = () => {
       };
     }
     
+    const updatedPlan = {
+      ...weekPlan,
+      days: updatedDays
+    };
+    
     updateWeeklyPlan(weekPlan.id, {
       days: updatedDays,
     });
     
+    setWeekPlan(updatedPlan);
     toast.success('Meal plan updated');
   };
   
@@ -92,9 +97,16 @@ const WeeklyPlanner: React.FC = () => {
     
     updatedDays[date].notes = notes;
     
+    const updatedPlan = {
+      ...weekPlan,
+      days: updatedDays
+    };
+    
     updateWeeklyPlan(weekPlan.id, {
       days: updatedDays,
     });
+    
+    setWeekPlan(updatedPlan);
   };
   
   // Get meal name by ID
@@ -157,49 +169,52 @@ const WeeklyPlanner: React.FC = () => {
             </CardHeader>
             
             <CardContent className="p-4 space-y-4">
-              {mealTypes.map((mealType) => (
-                <div key={mealType} className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase">
-                    {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                  </p>
-                  
-                  <div className="flex gap-2 items-center">
-                    <Select
-                      value={mealType === 'snack' 
-                        ? weekPlan.days[day.date]?.snacks?.[0] || '' 
-                        : weekPlan.days[day.date]?.[mealType] || ''
-                      }
-                      onValueChange={(value) => updateMealInPlan(day.date, mealType, value)}
-                    >
-                      <SelectTrigger className="w-full h-8 text-sm">
-                        <SelectValue placeholder={`Add ${mealType}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">None</SelectItem>
-                        {meals
-                          .filter(meal => meal.type === mealType)
-                          .map(meal => (
-                            <SelectItem key={meal.id} value={meal.id}>
-                              {meal.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+              {mealTypes.map((mealType) => {
+                const mealId = mealType === 'snack' 
+                  ? weekPlan.days[day.date]?.snacks?.[0] || ''
+                  : weekPlan.days[day.date]?.[mealType] || '';
+                
+                return (
+                  <div key={mealType} className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                    </p>
                     
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 flex-shrink-0"
-                      onClick={() => {
-                        // This would typically open a form to add a meal directly
-                        toast.info('Use the Add Meal button at the top to create new meals');
-                      }}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2 items-center">
+                      <Select
+                        value={mealId}
+                        onValueChange={(value) => updateMealInPlan(day.date, mealType, value)}
+                      >
+                        <SelectTrigger className="w-full h-8 text-sm">
+                          <SelectValue placeholder={`Add ${mealType}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {meals
+                            .filter(meal => meal.type === mealType)
+                            .map(meal => (
+                              <SelectItem key={meal.id} value={meal.id}>
+                                {meal.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 flex-shrink-0"
+                        onClick={() => {
+                          // This would typically open a form to add a meal directly
+                          toast.info('Use the Add Meal button at the top to create new meals');
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               
               <div className="space-y-1 pt-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase">Notes</p>
