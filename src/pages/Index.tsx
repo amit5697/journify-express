@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, CheckCircle2, Star } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, CheckCircle2, Star, Utensils } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -123,6 +123,11 @@ const Index = () => {
                 icon: <Star className="h-6 w-6 text-primary" />
               },
               {
+                title: "Diet Planning",
+                description: "Plan and track your meals to maintain a healthy diet and understand your nutrition patterns.",
+                icon: <Utensils className="h-6 w-6 text-primary" />
+              },
+              {
                 title: "Productivity Insights",
                 description: "Measure your productivity to understand your most effective days and working conditions.",
                 icon: <CheckCircle2 className="h-6 w-6 text-primary" />
@@ -152,14 +157,25 @@ const Index = () => {
           <p className="text-muted-foreground max-w-md mx-auto mb-8">
             Start your journaling practice today and gain valuable insights into your daily life.
           </p>
-          <Button 
-            onClick={() => navigate('/journal')}
-            size="lg"
-            className="button-hover gap-2"
-          >
-            Get Started
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-col md:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => navigate('/journal')}
+              size="lg"
+              className="button-hover gap-2"
+            >
+              Start Journaling
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button 
+              onClick={() => navigate('/diet-planner')}
+              variant="outline"
+              size="lg"
+              className="button-hover gap-2"
+            >
+              Try Diet Planner
+              <Utensils className="h-4 w-4" />
+            </Button>
+          </div>
           <p className="mt-8 text-sm text-muted-foreground">
             © {new Date().getFullYear()} Daily Journal. All rights reserved.
           </p>

@@ -4,13 +4,15 @@ import Sidebar from '@/components/Sidebar';
 import JournalForm from '@/components/JournalForm';
 import { useJournalStore } from '@/utils/journalStore';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Utensils } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
 
 const Journal: React.FC = () => {
   const { activeEntryId, setActiveEntry } = useJournalStore();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   // Automatically collapse sidebar on mobile
   useEffect(() => {
@@ -41,15 +43,26 @@ const Journal: React.FC = () => {
         <header className="h-16 border-b flex items-center justify-between px-6">
           <h1 className="text-xl font-medium">Daily Journal</h1>
           
-          {!sidebarExpanded && (
+          <div className="flex items-center gap-2">
+            {!sidebarExpanded && (
+              <Button 
+                onClick={handleNewEntry}
+                className="button-hover"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Entry
+              </Button>
+            )}
+            
             <Button 
-              onClick={handleNewEntry}
-              className="button-hover"
+              variant="outline"
+              onClick={() => navigate('/diet-planner')}
+              className="flex items-center gap-2"
             >
-              <Plus className="h-4 w-4 mr-1" />
-              New Entry
+              <Utensils className="h-4 w-4" />
+              Diet Planner
             </Button>
-          )}
+          </div>
         </header>
         
         <main className="flex-1 overflow-y-auto p-6">
