@@ -7,6 +7,7 @@ import JournalEntry from './JournalEntry';
 import { PlusCircle, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 interface SidebarProps {
   onNewEntry: () => void;
@@ -15,8 +16,16 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onNewEntry, expanded, onToggle }) => {
-  const { entries, activeEntryId, setActiveEntry } = useJournalStore();
+  const { entries, activeEntryId, setActiveEntry, deleteEntry } = useJournalStore();
   const isMobile = useIsMobile();
+  
+  const handleDelete = (id: string) => {
+    // Confirm before deleting
+    if (window.confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) {
+      deleteEntry(id);
+      toast.success('Journal entry deleted');
+    }
+  };
   
   return (
     <div className={cn(
@@ -79,6 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onNewEntry, expanded, onToggle }) => 
                       entry={entry}
                       isActive={entry.id === activeEntryId}
                       onClick={() => setActiveEntry(entry.id)}
+                      onDelete={handleDelete}
                     />
                   ))}
               </div>

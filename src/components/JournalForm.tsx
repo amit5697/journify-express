@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import RatingSelector from './RatingSelector';
 import { JournalEntry, useJournalStore } from '@/utils/journalStore';
 import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 
 interface JournalFormProps {
   entryId?: string;
@@ -14,7 +15,7 @@ interface JournalFormProps {
 }
 
 const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
-  const { addEntry, updateEntry, getEntryById } = useJournalStore();
+  const { addEntry, updateEntry, getEntryById, deleteEntry, setActiveEntry } = useJournalStore();
   const today = format(new Date(), 'yyyy-MM-dd');
   
   const [entry, setEntry] = useState<Partial<JournalEntry>>({
@@ -33,8 +34,16 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
       if (existingEntry) {
         setEntry(existingEntry);
       }
+    } else {
+      // Reset form if no entryId is provided (new entry)
+      setEntry({
+        date: today,
+        content: '',
+        energy: 5,
+        productivity: 5
+      });
     }
-  }, [entryId, getEntryById]);
+  }, [entryId, getEntryById, today]);
   
   const handleChange = (field: keyof JournalEntry, value: any) => {
     setEntry(prev => ({ ...prev, [field]: value }));
@@ -80,13 +89,39 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
     }, 500); // Artificial delay for animation
   };
   
+  const handleDelete = () => {
+    if (!entryId) return;
+    
+    // Confirm before deleting
+    if (window.confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) {
+      deleteEntry(entryId);
+      setActiveEntry(null);
+      toast.success('Journal entry deleted');
+    }
+  };
+  
   return (
     <Card className="w-full h-full overflow-hidden shadow-sm border animate-in">
       <form onSubmit={handleSubmit} className="h-full flex flex-col">
         <CardHeader className="pb-4">
-          <CardTitle className="text-xl font-medium">
-            {entryId ? 'Edit Journal Entry' : 'New Journal Entry'}
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-xl font-medium">
+              {entryId ? 'Edit Journal Entry' : 'New Journal Entry'}
+            </CardTitle>
+            
+            {entryId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            )}
+          </div>
         </CardHeader>
         
         <CardContent className="flex-grow space-y-6 overflow-y-auto">
