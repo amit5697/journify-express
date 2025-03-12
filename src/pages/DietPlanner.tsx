@@ -14,6 +14,14 @@ const DietPlanner: React.FC = () => {
   const [isAddingMeal, setIsAddingMeal] = useState(false);
   const { meals } = useDietStore();
   
+  const handleAddMealClick = () => {
+    setIsAddingMeal(true);
+  };
+  
+  const handleMealFormClose = () => {
+    setIsAddingMeal(false);
+  };
+  
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -26,7 +34,7 @@ const DietPlanner: React.FC = () => {
               
               {!isAddingMeal && (
                 <Button 
-                  onClick={() => setIsAddingMeal(true)} 
+                  onClick={handleAddMealClick} 
                   className="gap-2"
                 >
                   <Plus className="h-4 w-4" />
@@ -42,7 +50,7 @@ const DietPlanner: React.FC = () => {
                   <CardDescription>Record what you eat to track your nutrition</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <MealForm onCancel={() => setIsAddingMeal(false)} onSave={() => setIsAddingMeal(false)} />
+                  <MealForm onCancel={handleMealFormClose} onSave={handleMealFormClose} />
                 </CardContent>
               </Card>
             ) : null}
@@ -67,7 +75,7 @@ const DietPlanner: React.FC = () => {
                     <p className="text-muted-foreground mb-6 max-w-md">
                       Start tracking your nutrition by adding meals to your daily plan
                     </p>
-                    <Button onClick={() => setIsAddingMeal(true)}>Add Your First Meal</Button>
+                    <Button onClick={handleAddMealClick}>Add Your First Meal</Button>
                   </div>
                 ) : (
                   <MealList />

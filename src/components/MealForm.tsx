@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,10 +30,18 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'notes' ? value : name === 'date' ? value : Number(value) || 0,
-    }));
+    
+    if (name === 'name' || name === 'notes' || name === 'date') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value === '' ? 0 : Number(value),
+      }));
+    }
   };
   
   const handleTypeChange = (value: string) => {
