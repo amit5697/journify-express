@@ -3,58 +3,50 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, addDays, startOfWeek } from 'date-fns';
-import { useDietStore, WeeklyPlan } from '@/utils/dietStore';
+import { useDietStore } from '@/utils/dietStore';
 import { ChevronLeft, ChevronRight, Plus, Calendar } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
-const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const WeeklyPlanner: React.FC = () => {
   const { weeklyPlans, addWeeklyPlan, updateWeeklyPlan, meals } = useDietStore();
   const [currentWeek, setCurrentWeek] = useState(() => startOfWeek(new Date()));
-  const [weekPlan, setWeekPlan] = useState<WeeklyPlan | null>(null);
+  const [weekPlan, setWeekPlan] = useState(null);
   
   // Initialize the week's plan data
   useEffect(() => {
     const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
-    const existingPlan = weeklyPlans.find((plan) => plan.weekStart === weekStartDate);
+    let existingPlan = weeklyPlans.find((plan) => plan.weekStart === weekStartDate);
     
-    if (existingPlan) {
-      setWeekPlan(existingPlan);
-    } else {
+    if (!existingPlan) {
       // Create a new empty plan for the week
-      const days: WeeklyPlan['days'] = {};
+      const days = {};
       for (let i = 0; i < 7; i++) {
         const day = format(addDays(currentWeek, i), 'yyyy-MM-dd');
         days[day] = {};
       }
       
-      const newPlan: Omit<WeeklyPlan, 'id'> = {
+      const newPlanId = addWeeklyPlan({
+        weekStart: weekStartDate,
+        days,
+      });
+      
+      existingPlan = {
+        id: newPlanId,
         weekStart: weekStartDate,
         days,
       };
-      
-      const newPlanId = addWeeklyPlan(newPlan);
-      setWeekPlan({
-        id: newPlanId,
-        ...newPlan
-      });
     }
+    
+    setWeekPlan(existingPlan);
   }, [currentWeek, weeklyPlans, addWeeklyPlan]);
   
-  // Navigate to previous/next week
-  const goToPrevWeek = () => {
-    setCurrentWeek(prev => addDays(prev, -7));
-  };
+  const goToPrevWeek = () => setCurrentWeek(prev => addDays(prev, -7));
+  const goToNextWeek = () => setCurrentWeek(prev => addDays(prev, 7));
   
-  const goToNextWeek = () => {
-    setCurrentWeek(prev => addDays(prev, 7));
-  };
-  
-  // Update meal in plan
   const updateMealInPlan = (date: string, mealType: string, mealId: string) => {
     if (!weekPlan) return;
     
@@ -63,30 +55,27 @@ const WeeklyPlanner: React.FC = () => {
       updatedDays[date] = {};
     }
     
-    // Update the specific meal type
     if (mealType === 'snack') {
-      updatedDays[date].snacks = [mealId]; // For simplicity, just one snack
+      updatedDays[date].snacks = mealId ? [mealId] : [];
     } else {
       updatedDays[date] = {
         ...updatedDays[date],
-        [mealType]: mealId,
+        [mealType]: mealId || undefined,
       };
     }
-    
-    const updatedPlan = {
-      ...weekPlan,
-      days: updatedDays
-    };
     
     updateWeeklyPlan(weekPlan.id, {
       days: updatedDays,
     });
     
-    setWeekPlan(updatedPlan);
+    setWeekPlan({
+      ...weekPlan,
+      days: updatedDays,
+    });
+    
     toast.success('Meal plan updated');
   };
   
-  // Update notes for a day
   const updateNotes = (date: string, notes: string) => {
     if (!weekPlan) return;
     
@@ -97,43 +86,29 @@ const WeeklyPlanner: React.FC = () => {
     
     updatedDays[date].notes = notes;
     
-    const updatedPlan = {
-      ...weekPlan,
-      days: updatedDays
-    };
-    
     updateWeeklyPlan(weekPlan.id, {
       days: updatedDays,
     });
     
-    setWeekPlan(updatedPlan);
+    setWeekPlan({
+      ...weekPlan,
+      days: updatedDays,
+    });
   };
-  
-  // Get meal name by ID
-  const getMealNameById = (mealId?: string) => {
-    if (!mealId) return '';
-    return meals.find(meal => meal.id === mealId)?.name || '';
-  };
-  
-  // Prepare the days of the week
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(currentWeek, i);
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayName = format(date, 'EEEE');
-    const dayNumber = format(date, 'd');
-    const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
-    
-    return {
-      date: dateStr,
-      dayName,
-      dayNumber,
-      isToday,
-    };
-  });
   
   if (!weekPlan) {
     return <div className="p-8 text-center">Loading weekly plan...</div>;
   }
+  
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(currentWeek, i);
+    return {
+      date: format(date, 'yyyy-MM-dd'),
+      dayName: format(date, 'EEEE'),
+      dayNumber: format(date, 'd'),
+      isToday: format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'),
+    };
+  });
   
   return (
     <div className="space-y-6">
@@ -170,9 +145,11 @@ const WeeklyPlanner: React.FC = () => {
             
             <CardContent className="p-4 space-y-4">
               {mealTypes.map((mealType) => {
-                const mealId = mealType === 'snack' 
+                const mealId = mealType === 'snack'
                   ? weekPlan.days[day.date]?.snacks?.[0] || ''
                   : weekPlan.days[day.date]?.[mealType] || '';
+                
+                const filteredMeals = meals.filter(meal => meal.type === mealType);
                 
                 return (
                   <div key={mealType} className="space-y-1">
@@ -186,17 +163,17 @@ const WeeklyPlanner: React.FC = () => {
                         onValueChange={(value) => updateMealInPlan(day.date, mealType, value)}
                       >
                         <SelectTrigger className="w-full h-8 text-sm">
-                          <SelectValue placeholder={`Add ${mealType}`} />
+                          <SelectValue placeholder={`Add ${mealType}`}>
+                            {mealId ? meals.find(m => m.id === mealId)?.name : `Add ${mealType}`}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="">None</SelectItem>
-                          {meals
-                            .filter(meal => meal.type === mealType)
-                            .map(meal => (
-                              <SelectItem key={meal.id} value={meal.id}>
-                                {meal.name}
-                              </SelectItem>
-                            ))}
+                          {filteredMeals.map(meal => (
+                            <SelectItem key={meal.id} value={meal.id}>
+                              {meal.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       
@@ -205,7 +182,6 @@ const WeeklyPlanner: React.FC = () => {
                         size="icon" 
                         className="h-8 w-8 flex-shrink-0"
                         onClick={() => {
-                          // This would typically open a form to add a meal directly
                           toast.info('Use the Add Meal button at the top to create new meals');
                         }}
                       >
