@@ -72,14 +72,14 @@ const Index = () => {
             </div>
           </div>
           
-          {/* Add a real image instead of the placeholder */}
+          {/* App screenshot image */}
           <div className="relative">
             <div className="absolute -top-6 -left-6 h-24 w-24 rounded-full bg-primary/10 backdrop-blur-xl z-0 animate-pulse-subtle"></div>
             
             <div className="aspect-square rounded-2xl overflow-hidden border border-border shadow-xl animate-in relative">
               <img 
-                src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80" 
-                alt="Journal and laptop" 
+                src="/lovable-uploads/00a04ac5-4f22-48b9-80bf-46ca7a8027ea.png" 
+                alt="Code editor with programming" 
                 className="object-cover w-full h-full"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent z-0"></div>
@@ -105,19 +105,19 @@ const Index = () => {
                 title: "Track Your Days",
                 description: "Record your daily experiences, thoughts, and feelings in a clean, distraction-free environment.",
                 icon: <BookOpen className="h-6 w-6 text-primary" />,
-                image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=400&q=80"
+                image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=400&q=80" // Colorful code on monitor
               },
               {
                 title: "Energy Levels",
                 description: "Monitor your energy levels over time to identify patterns and optimize your daily routine.",
                 icon: <Star className="h-6 w-6 text-primary" />,
-                image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=400&q=80"
+                image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=400&q=80" // Java monitor
               },
               {
                 title: "Diet Planning",
                 description: "Plan and track your meals to maintain a healthy diet and understand your nutrition patterns.",
                 icon: <Utensils className="h-6 w-6 text-primary" />,
-                image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80"
+                image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=400&q=80" // MacBook with code
               }
             ].map((feature, index) => (
               <div 
