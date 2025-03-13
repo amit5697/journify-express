@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -72,14 +71,13 @@ const Index = () => {
             </div>
           </div>
           
-          {/* App screenshot image */}
           <div className="relative">
             <div className="absolute -top-6 -left-6 h-24 w-24 rounded-full bg-primary/10 backdrop-blur-xl z-0 animate-pulse-subtle"></div>
             
             <div className="aspect-square rounded-2xl overflow-hidden border border-border shadow-xl animate-in relative">
               <img 
-                src="/lovable-uploads/00a04ac5-4f22-48b9-80bf-46ca7a8027ea.png" 
-                alt="Code editor with programming" 
+                src="https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=1200&q=80" 
+                alt="Journal with pen" 
                 className="object-cover w-full h-full"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent z-0"></div>
@@ -105,19 +103,19 @@ const Index = () => {
                 title: "Track Your Days",
                 description: "Record your daily experiences, thoughts, and feelings in a clean, distraction-free environment.",
                 icon: <BookOpen className="h-6 w-6 text-primary" />,
-                image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=400&q=80" // Colorful code on monitor
+                image: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=600&q=80" // Journal with pen
               },
               {
                 title: "Energy Levels",
                 description: "Monitor your energy levels over time to identify patterns and optimize your daily routine.",
                 icon: <Star className="h-6 w-6 text-primary" />,
-                image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=400&q=80" // Java monitor
+                image: "https://images.unsplash.com/photo-1490818387583-1baba5e638af?auto=format&fit=crop&w=600&q=80" // Energy and productivity chart
               },
               {
                 title: "Diet Planning",
                 description: "Plan and track your meals to maintain a healthy diet and understand your nutrition patterns.",
                 icon: <Utensils className="h-6 w-6 text-primary" />,
-                image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=400&q=80" // MacBook with code
+                image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=600&q=80" // Healthy food
               }
             ].map((feature, index) => (
               <div 

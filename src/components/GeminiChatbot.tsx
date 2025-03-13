@@ -105,8 +105,8 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
     setIsTyping(true);
     
     try {
-      // Call Gemini API
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+      // Call Gemini API with the CORRECT model name
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
