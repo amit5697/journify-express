@@ -72,39 +72,17 @@ const Index = () => {
             </div>
           </div>
           
+          {/* Add a real image instead of the placeholder */}
           <div className="relative">
             <div className="absolute -top-6 -left-6 h-24 w-24 rounded-full bg-primary/10 backdrop-blur-xl z-0 animate-pulse-subtle"></div>
             
-            <div className="aspect-square rounded-2xl bg-muted/30 p-6 backdrop-blur overflow-hidden border border-border shadow-xl animate-in relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 z-0"></div>
-              
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="w-1/2 h-6 rounded-lg bg-background animate-pulse-subtle"></div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="w-full h-6 rounded-lg bg-background animate-pulse-subtle"></div>
-                  <div className="w-full h-32 rounded-lg bg-background animate-pulse-subtle"></div>
-                  
-                  <div className="space-y-2">
-                    <div className="w-1/2 h-4 rounded-lg bg-background animate-pulse-subtle"></div>
-                    <div className="w-full h-8 rounded-lg bg-primary/10 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full w-[70%] bg-primary/20 rounded-lg"></div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="w-1/2 h-4 rounded-lg bg-background animate-pulse-subtle"></div>
-                    <div className="w-full h-8 rounded-lg bg-primary/10 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full w-[85%] bg-primary/20 rounded-lg"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="aspect-square rounded-2xl overflow-hidden border border-border shadow-xl animate-in relative">
+              <img 
+                src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80" 
+                alt="Journal and laptop" 
+                className="object-cover w-full h-full"
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent z-0"></div>
             </div>
             
             <div className="absolute -bottom-6 -right-6 h-16 w-16 rounded-full bg-primary/10 backdrop-blur-xl z-0"></div>
@@ -126,33 +104,40 @@ const Index = () => {
               {
                 title: "Track Your Days",
                 description: "Record your daily experiences, thoughts, and feelings in a clean, distraction-free environment.",
-                icon: <BookOpen className="h-6 w-6 text-primary" />
+                icon: <BookOpen className="h-6 w-6 text-primary" />,
+                image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=400&q=80"
               },
               {
                 title: "Energy Levels",
                 description: "Monitor your energy levels over time to identify patterns and optimize your daily routine.",
-                icon: <Star className="h-6 w-6 text-primary" />
+                icon: <Star className="h-6 w-6 text-primary" />,
+                image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=400&q=80"
               },
               {
                 title: "Diet Planning",
                 description: "Plan and track your meals to maintain a healthy diet and understand your nutrition patterns.",
-                icon: <Utensils className="h-6 w-6 text-primary" />
-              },
-              {
-                title: "Productivity Insights",
-                description: "Measure your productivity to understand your most effective days and working conditions.",
-                icon: <CheckCircle2 className="h-6 w-6 text-primary" />
+                icon: <Utensils className="h-6 w-6 text-primary" />,
+                image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80"
               }
             ].map((feature, index) => (
               <div 
                 key={index} 
-                className="rounded-xl border p-6 bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-4px]"
+                className="rounded-xl border p-0 bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-4px] overflow-hidden"
               >
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  {feature.icon}
+                <div className="h-48 overflow-hidden">
+                  <img 
+                    src={feature.image} 
+                    alt={feature.title} 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <h3 className="text-xl font-medium mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
+                <div className="p-6">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground">{feature.description}</p>
+                </div>
               </div>
             ))}
           </div>

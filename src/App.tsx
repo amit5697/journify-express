@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,12 +19,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   
   useEffect(() => {
-    // Check if user is logged in
     const user = localStorage.getItem('user');
     setIsAuthenticated(!!user);
   }, []);
   
-  // Show loading state while checking authentication
   if (isAuthenticated === null) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
@@ -34,7 +31,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  // Determine which chatbot context to use based on the current path
   const [chatbotContext, setChatbotContext] = useState("general assistance");
   
   useEffect(() => {
@@ -50,10 +46,8 @@ const App = () => {
       }
     };
     
-    // Set initial context
     handleRouteChange();
     
-    // Listen for route changes
     window.addEventListener('popstate', handleRouteChange);
     
     return () => {
@@ -81,43 +75,15 @@ const App = () => {
                   <DietPlanner />
                 </ProtectedRoute>
               } />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             
-            {/* Global chatbot component (except on homepage and signin) */}
-            <RouteBasedChatbot context={chatbotContext} />
+            <GeminiChatbot context={chatbotContext} />
           </BrowserRouter>
         </TooltipProvider>
       </HelmetProvider>
     </QueryClientProvider>
   );
-};
-
-// Component to conditionally render chatbot based on the current route
-const RouteBasedChatbot = ({ context }: { context: string }) => {
-  const [shouldShow, setShouldShow] = useState(false);
-  
-  useEffect(() => {
-    const path = window.location.pathname;
-    // Don't show on homepage or signin page
-    setShouldShow(path !== '/' && path !== '/signin');
-    
-    const handleRouteChange = () => {
-      const currentPath = window.location.pathname;
-      setShouldShow(currentPath !== '/' && currentPath !== '/signin');
-    };
-    
-    window.addEventListener('popstate', handleRouteChange);
-    
-    return () => {
-      window.removeEventListener('popstate', handleRouteChange);
-    };
-  }, []);
-  
-  if (!shouldShow) return null;
-  
-  return <GeminiChatbot context={context} />;
 };
 
 export default App;
