@@ -2,13 +2,23 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, CheckCircle2, Star, Utensils } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, CheckCircle2, Star, Utensils, LogIn } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 const Index = () => {
   const navigate = useNavigate();
   
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Daily Journal - Track Your Thoughts and Energy</title>
+        <meta name="description" content="A simple, beautiful journal to record your thoughts, track your energy levels, and measure productivity." />
+        <meta property="og:title" content="Daily Journal - Personal Journaling App" />
+        <meta property="og:description" content="Record daily experiences and monitor energy levels with our journal app." />
+        <meta property="og:image" content="/og-image.png" />
+        <meta property="twitter:card" content="summary_large_image" />
+      </Helmet>
+      
       <header className="border-b">
         <div className="container mx-auto py-4 px-6 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -16,11 +26,12 @@ const Index = () => {
             <h1 className="text-xl font-medium">Daily Journal</h1>
           </div>
           <Button 
-            onClick={() => navigate('/journal')}
+            onClick={() => navigate('/signin')}
             variant="outline"
-            className="button-hover"
+            className="button-hover gap-2"
           >
             Sign In
+            <LogIn className="h-4 w-4" />
           </Button>
         </div>
       </header>
@@ -43,7 +54,7 @@ const Index = () => {
             
             <div className="flex gap-4">
               <Button 
-                onClick={() => navigate('/journal')}
+                onClick={() => navigate('/signin')}
                 size="lg"
                 className="button-hover gap-2 text-base"
               >
@@ -54,7 +65,7 @@ const Index = () => {
                 variant="outline"
                 size="lg"
                 className="button-hover"
-                onClick={() => navigate('/journal')}
+                onClick={() => navigate('/signin')}
               >
                 Learn More
               </Button>
@@ -159,7 +170,7 @@ const Index = () => {
           </p>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
             <Button 
-              onClick={() => navigate('/journal')}
+              onClick={() => navigate('/signin')}
               size="lg"
               className="button-hover gap-2"
             >
@@ -167,7 +178,7 @@ const Index = () => {
               <ArrowRight className="h-4 w-4" />
             </Button>
             <Button 
-              onClick={() => navigate('/diet-planner')}
+              onClick={() => navigate('/signin')}
               variant="outline"
               size="lg"
               className="button-hover gap-2"
