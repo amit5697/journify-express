@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ interface MealFormProps {
 
 const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     type: 'breakfast' as MealType,
     name: '',
@@ -27,6 +29,18 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
     notes: '',
     date: new Date().toISOString().split('T')[0],
   });
+  
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    
+    getCurrentUser();
+  }, []);
   
   useEffect(() => {
     const fetchMeal = async () => {
@@ -91,6 +105,11 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
       return;
     }
     
+    if (!userId) {
+      toast.error('You must be logged in to save meals');
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -115,7 +134,7 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
       } else {
         const { error } = await supabase
           .from('meals')
-          .insert([{
+          .insert({
             type: formData.type,
             name: formData.name,
             calories: formData.calories,
@@ -123,8 +142,9 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
             carbs: formData.carbs,
             fat: formData.fat,
             notes: formData.notes,
-            date: formData.date
-          }]);
+            date: formData.date,
+            user_id: userId
+          });
         
         if (error) throw error;
         toast.success('Meal added successfully');
@@ -261,7 +281,7 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
         >
           Cancel
         </Button>
-        <Button type="submit">
+        <Button type="submit" disabled={isLoading || !userId}>
           {mealId ? 'Update Meal' : 'Add Meal'}
         </Button>
       </div>

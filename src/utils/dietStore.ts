@@ -15,6 +15,7 @@ export interface Meal {
   fat: number;
   notes?: string;
   createdAt: number;
+  user_id?: string;
 }
 
 export interface WeeklyPlan {

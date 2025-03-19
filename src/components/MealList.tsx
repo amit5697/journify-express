@@ -20,6 +20,7 @@ interface Meal {
   carbs: number;
   fat: number;
   notes?: string;
+  user_id: string;
 }
 
 const mealTypeIcons = {
@@ -54,8 +55,12 @@ const MealList: React.FC = () => {
         if (error) {
           console.error('Error fetching meals:', error);
           toast.error('Failed to load meals');
-        } else {
-          setMeals(data || []);
+        } else if (data) {
+          const typedMeals = data.map(meal => ({
+            ...meal,
+            type: meal.type as MealType
+          }));
+          setMeals(typedMeals);
         }
       } catch (error) {
         console.error('Error in fetchMeals:', error);

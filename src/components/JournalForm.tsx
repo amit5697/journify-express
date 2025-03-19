@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,19 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    
+    getCurrentUser();
+  }, []);
   
   // If editing an existing entry, load its data
   useEffect(() => {
@@ -86,6 +100,12 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         return;
       }
       
+      if (!userId) {
+        toast.error("You must be logged in to save entries");
+        setIsLoading(false);
+        return;
+      }
+      
       if (entryId) {
         // Update existing entry
         const { error } = await supabase
@@ -105,12 +125,13 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         // Create new entry
         const { data, error } = await supabase
           .from('journal_entries')
-          .insert([{
-            date: entry.date,
-            content: entry.content,
-            energy: entry.energy,
-            productivity: entry.productivity
-          }])
+          .insert({
+            date: entry.date as string,
+            content: entry.content as string,
+            energy: entry.energy as number,
+            productivity: entry.productivity as number,
+            user_id: userId
+          })
           .select();
         
         if (error) throw error;
@@ -220,7 +241,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           <Button 
             type="submit" 
             className="w-full button-hover"
-            disabled={isLoading}
+            disabled={isLoading || !userId}
           >
             {isLoading ? 'Saving...' : entryId ? 'Update Entry' : 'Save Entry'}
           </Button>

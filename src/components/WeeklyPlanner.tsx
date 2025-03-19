@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,7 @@ interface Meal {
   carbs: number;
   fat: number;
   notes?: string;
+  user_id: string;
 }
 
 interface WeeklyPlan {
@@ -55,8 +57,13 @@ const WeeklyPlanner: React.FC = () => {
         
         if (error) {
           console.error('Error fetching meals:', error);
-        } else {
-          setMeals(data || []);
+        } else if (data) {
+          // Convert the data to ensure type property is a valid MealType
+          const typedMeals = data.map(meal => ({
+            ...meal,
+            type: meal.type as MealType
+          }));
+          setMeals(typedMeals);
         }
       } catch (error) {
         console.error('Error in fetchMeals:', error);

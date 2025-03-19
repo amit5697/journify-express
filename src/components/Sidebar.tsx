@@ -1,191 +1,143 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
-import JournalEntry from './JournalEntry';
+import { BookOpen, PlusCircle, Home, UtensilsCrossed, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 interface SidebarProps {
-  onNewEntry: () => void;
-  expanded: boolean;
-  onToggle: () => void;
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-interface JournalEntryType {
-  id: string;
-  date: string;
-  content: string;
-  energy: number;
-  productivity: number;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ onNewEntry, expanded, onToggle }) => {
-  const [entries, setEntries] = useState<JournalEntryType[]>([]);
-  const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const fetchEntries = async () => {
-      setLoading(true);
-      
-      try {
-        const { data, error } = await supabase
-          .from('journal_entries')
-          .select('*')
-          .order('date', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching journal entries:', error);
-          toast.error('Failed to load journal entries');
-        } else {
-          setEntries(data || []);
-          
-          if (data && data.length > 0 && !activeEntryId) {
-            setActiveEntryId(data[0].id);
-          }
-        }
-      } catch (error) {
-        console.error('Error in fetchEntries:', error);
-      } finally {
-        setLoading(false);
-      }
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
     };
     
-    fetchEntries();
+    getUser();
     
-    const subscription = supabase
-      .channel('journal_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'journal_entries' 
-      }, (payload) => {
-        fetchEntries();
-      })
-      .subscribe();
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/signin');
+      } else if (session) {
+        setUser(session.user);
+      }
+    });
     
     return () => {
-      supabase.removeChannel(subscription);
+      authListener.subscription.unsubscribe();
     };
-  }, []);
-  
-  const filteredEntries = entries.filter(entry => {
-    if (!searchQuery) return true;
-    
-    const lowerQuery = searchQuery.toLowerCase();
-    return (
-      entry.content.toLowerCase().includes(lowerQuery) ||
-      entry.date.toLowerCase().includes(lowerQuery)
-    );
-  });
+  }, [navigate]);
 
-  const handleEntryClick = (entryId: string) => {
-    setActiveEntryId(entryId);
-  };
-
-  const handleDeleteEntry = async (entryId: string) => {
-    if (confirm('Are you sure you want to delete this entry?')) {
-      try {
-        const { error } = await supabase
-          .from('journal_entries')
-          .delete()
-          .eq('id', entryId);
-        
-        if (error) {
-          toast.error('Failed to delete entry');
-          console.error(error);
-        } else {
-          toast.success('Entry deleted successfully');
-          
-          if (entryId === activeEntryId && entries.length > 1) {
-            const remainingEntries = entries.filter(e => e.id !== entryId);
-            if (remainingEntries.length > 0) {
-              setActiveEntryId(remainingEntries[0].id);
-            } else {
-              setActiveEntryId(null);
-            }
-          }
-          
-          setEntries(prevEntries => prevEntries.filter(e => e.id !== entryId));
-        }
-      } catch (error) {
-        console.error('Error in handleDeleteEntry:', error);
-      }
+  const handleLogout = async () => {
+    setIsLoading(true);
+    try {
+      await supabase.auth.signOut();
+      navigate('/signin');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const navItems = [
+    {
+      name: 'Home',
+      path: '/',
+      icon: <Home className="w-5 h-5" />,
+    },
+    {
+      name: 'Journal',
+      path: '/journal',
+      icon: <BookOpen className="w-5 h-5" />,
+    },
+    {
+      name: 'Diet Planner',
+      path: '/diet-planner',
+      icon: <UtensilsCrossed className="w-5 h-5" />,
+    },
+  ];
+
   return (
-    <div className={cn(
-      "flex flex-col h-full border-r border-border bg-sidebar transition-all duration-500 relative",
-      expanded ? "w-80" : "w-0"
-    )}>
-      <div className="absolute top-4 -right-12 z-10">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={onToggle}
-          className="rounded-full shadow-md"
-        >
-          {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-        </Button>
-      </div>
-      
-      {expanded && (
-        <>
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-                <h2 className="font-medium">Journal Entries</h2>
-              </div>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                {entries.length}
-              </span>
-            </div>
-            
-            <Button 
-              onClick={onNewEntry} 
-              className="w-full button-hover flex items-center gap-1"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>New Entry</span>
-            </Button>
-          </div>
-          
-          <ScrollArea className="flex-1 p-4">
-            {entries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                <BookOpen className="h-12 w-12 text-muted mb-4" />
-                <p className="text-muted-foreground mb-2">No journal entries yet</p>
-                <Button 
-                  variant="link" 
-                  onClick={onNewEntry}
-                  className="text-primary"
-                >
-                  Create your first entry
-                </Button>
-              </div>
-            ) : (
-              <div>
-                {filteredEntries
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((entry) => (
-                    <JournalEntry
-                      key={entry.id}
-                      entry={entry}
-                      isActive={entry.id === activeEntryId}
-                      onClick={() => handleEntryClick(entry.id)}
-                      onDelete={handleDeleteEntry}
-                    />
-                  ))}
-              </div>
-            )}
-          </ScrollArea>
-        </>
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-50 w-72 bg-background border-r border-border transition-transform duration-300 transform lg:translate-x-0 flex flex-col h-full",
+        isOpen ? "translate-x-0" : "-translate-x-full"
       )}
-    </div>
+    >
+      <div className="px-6 py-8 border-b border-border">
+        <Link to="/" className="flex items-center gap-2">
+          <span className="font-bold text-xl">Wellbeing App</span>
+        </Link>
+      </div>
+
+      <div className="flex-1 overflow-auto py-6 px-4">
+        <nav className="space-y-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",
+                location.pathname === item.path
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}
+            >
+              {item.icon}
+              {item.name}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="mt-10">
+          <h3 className="text-xs font-medium uppercase text-muted-foreground tracking-wider mb-3 px-3">
+            Quick Actions
+          </h3>
+          <div className="space-y-1">
+            <Link
+              to="/journal"
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
+            >
+              <PlusCircle className="w-5 h-5" />
+              New Journal Entry
+            </Link>
+            <Link
+              to="/diet-planner"
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
+            >
+              <BookOpen className="w-5 h-5" />
+              Add Meal
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 border-t border-border">
+        {user && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start text-muted-foreground hover:text-destructive"
+            onClick={handleLogout}
+            disabled={isLoading}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            {isLoading ? 'Logging out...' : 'Log out'}
+          </Button>
+        )}
+      </div>
+    </aside>
   );
 };
 
