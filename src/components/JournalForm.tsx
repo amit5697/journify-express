@@ -123,7 +123,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         toast.success("Journal entry updated");
       } else {
         // Create new entry
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('journal_entries')
           .insert({
             date: entry.date as string,
@@ -131,8 +131,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
             energy: entry.energy as number,
             productivity: entry.productivity as number,
             user_id: userId
-          })
-          .select();
+          });
         
         if (error) throw error;
         toast.success("New journal entry created");
