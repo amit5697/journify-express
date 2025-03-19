@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, ChevronLeft } from 'lucide-react';
+import LogoutButton from '@/components/LogoutButton';
 
 const DietPlannerHeader: React.FC = () => {
   const navigate = useNavigate();
@@ -25,12 +26,16 @@ const DietPlannerHeader: React.FC = () => {
         </div>
       </div>
       
-      <Button 
-        variant="outline"
-        onClick={() => navigate('/')}
-      >
-        Home
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button 
+          variant="outline"
+          onClick={() => navigate('/')}
+        >
+          Home
+        </Button>
+        
+        <LogoutButton />
+      </div>
     </header>
   );
 };

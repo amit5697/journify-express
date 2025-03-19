@@ -8,6 +8,7 @@ import { Plus, Utensils } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import LogoutButton from '@/components/LogoutButton';
 
 const Journal: React.FC = () => {
   const { activeEntryId, setActiveEntry } = useJournalStore();
@@ -75,6 +76,8 @@ const Journal: React.FC = () => {
                 <Utensils className="h-4 w-4" />
                 Diet Planner
               </Button>
+              
+              <LogoutButton />
             </div>
           </header>
           
