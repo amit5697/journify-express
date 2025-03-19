@@ -41,6 +41,9 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
+        console.log("Current user ID:", user.id); // Debug: Log user ID
+      } else {
+        console.log("No user found"); // Debug: Log when no user
       }
     };
     
@@ -106,6 +109,8 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         return;
       }
       
+      console.log("Saving entry for user:", userId); // Debug: Log saving action
+      
       if (entryId) {
         // Update existing entry
         const { error } = await supabase
@@ -119,11 +124,22 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           })
           .eq('id', entryId);
         
-        if (error) throw error;
+        if (error) {
+          console.error("Update error:", error); // Debug: Log update error
+          throw error;
+        }
         toast.success("Journal entry updated");
       } else {
         // Create new entry
-        const { error } = await supabase
+        console.log("Creating new entry with data:", {
+          date: entry.date,
+          content: entry.content,
+          energy: entry.energy,
+          productivity: entry.productivity,
+          user_id: userId
+        }); // Debug: Log creation data
+        
+        const { data, error } = await supabase
           .from('journal_entries')
           .insert({
             date: entry.date as string,
@@ -131,9 +147,15 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
             energy: entry.energy as number,
             productivity: entry.productivity as number,
             user_id: userId
-          });
+          })
+          .select();
         
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error:", error); // Debug: Log insert error
+          throw error;
+        }
+        
+        console.log("Entry created:", data); // Debug: Log created entry
         toast.success("New journal entry created");
         
         // Reset form if it's a new entry
@@ -145,7 +167,11 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         });
       }
       
-      if (onSave) onSave();
+      // Call onSave callback to refresh the entries list
+      if (onSave) {
+        console.log("Calling onSave callback"); // Debug: Log callback
+        onSave();
+      }
     } catch (error) {
       console.error('Error saving journal entry:', error);
       toast.error("Something went wrong");

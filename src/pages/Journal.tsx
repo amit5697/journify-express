@@ -50,15 +50,19 @@ const Journal: React.FC = () => {
         return;
       }
       
+      console.log("Fetching entries for user:", user.id); // Debug: Log user ID
+      
       const { data, error } = await supabase
         .from('journal_entries')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false });
       
       if (error) {
         console.error('Error fetching journal entries:', error);
         toast.error('Failed to load journal entries');
       } else {
+        console.log("Fetched entries:", data); // Debug: Log fetched entries
         setEntries(data || []);
       }
       
@@ -77,7 +81,8 @@ const Journal: React.FC = () => {
           schema: 'public',
           table: 'journal_entries'
         },
-        () => {
+        (payload) => {
+          console.log("Real-time update:", payload); // Debug: Log real-time updates
           fetchEntries();
         }
       )
@@ -113,14 +118,20 @@ const Journal: React.FC = () => {
   const handleEntryRefresh = () => {
     // This function will be called after saving an entry
     const fetchEntries = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+      
       const { data, error } = await supabase
         .from('journal_entries')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false });
       
       if (error) {
         console.error('Error refreshing entries:', error);
       } else {
+        console.log("Refreshed entries:", data); // Debug: Log refreshed entries
         setEntries(data || []);
       }
     };
