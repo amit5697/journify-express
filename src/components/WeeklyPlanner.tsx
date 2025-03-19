@@ -1,48 +1,107 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, addDays, startOfWeek } from 'date-fns';
-import { useDietStore } from '@/utils/dietStore';
 import { ChevronLeft, ChevronRight, Plus, Calendar } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+interface Meal {
+  id: string;
+  date: string;
+  type: MealType;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  notes?: string;
+}
+
+interface WeeklyPlan {
+  id?: string;
+  weekStart: string;
+  days: {
+    [date: string]: {
+      breakfast?: string; // Meal ID
+      lunch?: string;
+      dinner?: string;
+      snacks?: string[];
+      notes?: string;
+    };
+  };
+}
 
 const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 
 const WeeklyPlanner: React.FC = () => {
-  const { weeklyPlans, addWeeklyPlan, updateWeeklyPlan, meals } = useDietStore();
   const [currentWeek, setCurrentWeek] = useState(() => startOfWeek(new Date()));
-  const [weekPlan, setWeekPlan] = useState(null);
+  const [weekPlan, setWeekPlan] = useState<WeeklyPlan | null>(null);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Fetch meals
+  useEffect(() => {
+    const fetchMeals = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('meals')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          console.error('Error fetching meals:', error);
+        } else {
+          setMeals(data || []);
+        }
+      } catch (error) {
+        console.error('Error in fetchMeals:', error);
+      }
+    };
+    
+    fetchMeals();
+    
+    // Set up real-time subscription for meals
+    const subscription = supabase
+      .channel('meal_updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'meals' 
+      }, () => {
+        fetchMeals();
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
   
   // Initialize the week's plan data
   useEffect(() => {
+    setLoading(true);
     const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
-    let existingPlan = weeklyPlans.find((plan) => plan.weekStart === weekStartDate);
     
-    if (!existingPlan) {
-      // Create a new empty plan for the week
-      const days = {};
-      for (let i = 0; i < 7; i++) {
-        const day = format(addDays(currentWeek, i), 'yyyy-MM-dd');
-        days[day] = {};
-      }
-      
-      const newPlanId = addWeeklyPlan({
-        weekStart: weekStartDate,
-        days,
-      });
-      
-      existingPlan = {
-        id: newPlanId,
-        weekStart: weekStartDate,
-        days,
-      };
+    // Create a new empty plan for the week
+    const days: Record<string, any> = {};
+    for (let i = 0; i < 7; i++) {
+      const day = format(addDays(currentWeek, i), 'yyyy-MM-dd');
+      days[day] = {};
     }
     
-    setWeekPlan(existingPlan);
-  }, [currentWeek, weeklyPlans, addWeeklyPlan]);
+    const newPlan: WeeklyPlan = {
+      weekStart: weekStartDate,
+      days,
+    };
+    
+    setWeekPlan(newPlan);
+    setLoading(false);
+  }, [currentWeek]);
   
   const goToPrevWeek = () => setCurrentWeek(prev => addDays(prev, -7));
   const goToNextWeek = () => setCurrentWeek(prev => addDays(prev, 7));
@@ -50,27 +109,27 @@ const WeeklyPlanner: React.FC = () => {
   const updateMealInPlan = (date: string, mealType: string, mealId: string) => {
     if (!weekPlan) return;
     
-    const updatedDays = { ...weekPlan.days };
-    if (!updatedDays[date]) {
-      updatedDays[date] = {};
-    }
-    
-    if (mealType === 'snack') {
-      updatedDays[date].snacks = mealId ? [mealId] : [];
-    } else {
-      updatedDays[date] = {
-        ...updatedDays[date],
-        [mealType]: mealId || undefined,
+    setWeekPlan(prevPlan => {
+      if (!prevPlan) return null;
+      
+      const updatedDays = { ...prevPlan.days };
+      if (!updatedDays[date]) {
+        updatedDays[date] = {};
+      }
+      
+      if (mealType === 'snack') {
+        updatedDays[date].snacks = mealId ? [mealId] : [];
+      } else {
+        updatedDays[date] = {
+          ...updatedDays[date],
+          [mealType]: mealId || undefined,
+        };
+      }
+      
+      return {
+        ...prevPlan,
+        days: updatedDays,
       };
-    }
-    
-    updateWeeklyPlan(weekPlan.id, {
-      days: updatedDays,
-    });
-    
-    setWeekPlan({
-      ...weekPlan,
-      days: updatedDays,
     });
     
     toast.success('Meal plan updated');
@@ -79,24 +138,24 @@ const WeeklyPlanner: React.FC = () => {
   const updateNotes = (date: string, notes: string) => {
     if (!weekPlan) return;
     
-    const updatedDays = { ...weekPlan.days };
-    if (!updatedDays[date]) {
-      updatedDays[date] = {};
-    }
-    
-    updatedDays[date].notes = notes;
-    
-    updateWeeklyPlan(weekPlan.id, {
-      days: updatedDays,
-    });
-    
-    setWeekPlan({
-      ...weekPlan,
-      days: updatedDays,
+    setWeekPlan(prevPlan => {
+      if (!prevPlan) return null;
+      
+      const updatedDays = { ...prevPlan.days };
+      if (!updatedDays[date]) {
+        updatedDays[date] = {};
+      }
+      
+      updatedDays[date].notes = notes;
+      
+      return {
+        ...prevPlan,
+        days: updatedDays,
+      };
     });
   };
   
-  if (!weekPlan) {
+  if (loading || !weekPlan) {
     return <div className="p-8 text-center">Loading weekly plan...</div>;
   }
   

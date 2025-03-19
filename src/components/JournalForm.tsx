@@ -1,13 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import RatingSelector from './RatingSelector';
-import { JournalEntry, useJournalStore } from '@/utils/journalStore';
 import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface JournalEntry {
+  id: string;
+  date: string;
+  content: string;
+  energy: number;
+  productivity: number;
+}
 
 interface JournalFormProps {
   entryId?: string;
@@ -15,7 +22,6 @@ interface JournalFormProps {
 }
 
 const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
-  const { addEntry, updateEntry, getEntryById, deleteEntry, setActiveEntry } = useJournalStore();
   const today = format(new Date(), 'yyyy-MM-dd');
   
   const [entry, setEntry] = useState<Partial<JournalEntry>>({
@@ -29,74 +35,124 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   
   // If editing an existing entry, load its data
   useEffect(() => {
-    if (entryId) {
-      const existingEntry = getEntryById(entryId);
-      if (existingEntry) {
-        setEntry(existingEntry);
+    const fetchEntry = async () => {
+      if (entryId) {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('journal_entries')
+          .select('*')
+          .eq('id', entryId)
+          .single();
+        
+        if (error) {
+          toast.error('Error loading journal entry');
+          console.error(error);
+        } else if (data) {
+          setEntry({
+            id: data.id,
+            date: data.date,
+            content: data.content,
+            energy: data.energy,
+            productivity: data.productivity
+          });
+        }
+        setIsLoading(false);
+      } else {
+        // Reset form if no entryId is provided (new entry)
+        setEntry({
+          date: today,
+          content: '',
+          energy: 5,
+          productivity: 5
+        });
       }
-    } else {
-      // Reset form if no entryId is provided (new entry)
-      setEntry({
-        date: today,
-        content: '',
-        energy: 5,
-        productivity: 5
-      });
-    }
-  }, [entryId, getEntryById, today]);
+    };
+    
+    fetchEntry();
+  }, [entryId, today]);
   
   const handleChange = (field: keyof JournalEntry, value: any) => {
     setEntry(prev => ({ ...prev, [field]: value }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    setTimeout(() => {
-      try {
-        if (!entry.content) {
-          toast.error("Please write something about your day");
-          setIsLoading(false);
-          return;
-        }
-        
-        if (entryId) {
-          updateEntry(entryId, entry);
-          toast.success("Journal entry updated");
-        } else {
-          addEntry(entry as Omit<JournalEntry, 'id' | 'createdAt'>);
-          toast.success("New journal entry created");
-          
-          // Reset form if it's a new entry
-          if (!entryId) {
-            setEntry({
-              date: today,
-              content: '',
-              energy: 5,
-              productivity: 5
-            });
-          }
-        }
-        
-        if (onSave) onSave();
-      } catch (error) {
-        toast.error("Something went wrong");
-        console.error(error);
-      } finally {
+    try {
+      if (!entry.content) {
+        toast.error("Please write something about your day");
         setIsLoading(false);
+        return;
       }
-    }, 500); // Artificial delay for animation
+      
+      if (entryId) {
+        // Update existing entry
+        const { error } = await supabase
+          .from('journal_entries')
+          .update({
+            date: entry.date,
+            content: entry.content,
+            energy: entry.energy,
+            productivity: entry.productivity,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', entryId);
+        
+        if (error) throw error;
+        toast.success("Journal entry updated");
+      } else {
+        // Create new entry
+        const { data, error } = await supabase
+          .from('journal_entries')
+          .insert([{
+            date: entry.date,
+            content: entry.content,
+            energy: entry.energy,
+            productivity: entry.productivity
+          }])
+          .select();
+        
+        if (error) throw error;
+        toast.success("New journal entry created");
+        
+        // Reset form if it's a new entry
+        setEntry({
+          date: today,
+          content: '',
+          energy: 5,
+          productivity: 5
+        });
+      }
+      
+      if (onSave) onSave();
+    } catch (error) {
+      console.error('Error saving journal entry:', error);
+      toast.error("Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!entryId) return;
     
     // Confirm before deleting
     if (window.confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) {
-      deleteEntry(entryId);
-      setActiveEntry(null);
-      toast.success('Journal entry deleted');
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', entryId);
+      
+      if (error) {
+        console.error('Error deleting entry:', error);
+        toast.error('Error deleting entry');
+      } else {
+        toast.success('Journal entry deleted');
+        if (onSave) onSave();
+      }
+      setIsLoading(false);
     }
   };
   

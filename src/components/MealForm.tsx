@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useDietStore, MealType } from '@/utils/dietStore';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 interface MealFormProps {
   mealId?: string;
@@ -14,19 +16,49 @@ interface MealFormProps {
 }
 
 const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
-  const { addMeal, updateMeal, getMealById } = useDietStore();
-  const existingMeal = mealId ? getMealById(mealId) : undefined;
-  
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    type: existingMeal?.type || 'breakfast' as MealType,
-    name: existingMeal?.name || '',
-    calories: existingMeal?.calories || 0,
-    protein: existingMeal?.protein || 0,
-    carbs: existingMeal?.carbs || 0,
-    fat: existingMeal?.fat || 0,
-    notes: existingMeal?.notes || '',
-    date: existingMeal?.date || new Date().toISOString().split('T')[0],
+    type: 'breakfast' as MealType,
+    name: '',
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    notes: '',
+    date: new Date().toISOString().split('T')[0],
   });
+  
+  useEffect(() => {
+    const fetchMeal = async () => {
+      if (mealId) {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('meals')
+          .select('*')
+          .eq('id', mealId)
+          .single();
+        
+        if (error) {
+          toast.error('Error loading meal data');
+          console.error(error);
+        } else if (data) {
+          setFormData({
+            type: data.type as MealType,
+            name: data.name,
+            calories: data.calories || 0,
+            protein: data.protein || 0,
+            carbs: data.carbs || 0,
+            fat: data.fat || 0,
+            notes: data.notes || '',
+            date: data.date,
+          });
+        }
+        setIsLoading(false);
+      }
+    };
+    
+    fetchMeal();
+  }, [mealId]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -51,7 +83,7 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
     }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim()) {
@@ -59,15 +91,52 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
       return;
     }
     
-    if (mealId) {
-      updateMeal(mealId, formData);
-      toast.success('Meal updated successfully');
-    } else {
-      addMeal(formData);
-      toast.success('Meal added successfully');
-    }
+    setIsLoading(true);
     
-    onSave();
+    try {
+      if (mealId) {
+        const { error } = await supabase
+          .from('meals')
+          .update({
+            type: formData.type,
+            name: formData.name,
+            calories: formData.calories,
+            protein: formData.protein,
+            carbs: formData.carbs,
+            fat: formData.fat,
+            notes: formData.notes,
+            date: formData.date,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', mealId);
+        
+        if (error) throw error;
+        toast.success('Meal updated successfully');
+      } else {
+        const { error } = await supabase
+          .from('meals')
+          .insert([{
+            type: formData.type,
+            name: formData.name,
+            calories: formData.calories,
+            protein: formData.protein,
+            carbs: formData.carbs,
+            fat: formData.fat,
+            notes: formData.notes,
+            date: formData.date
+          }]);
+        
+        if (error) throw error;
+        toast.success('Meal added successfully');
+      }
+      
+      onSave();
+    } catch (error) {
+      console.error('Error saving meal:', error);
+      toast.error('Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (

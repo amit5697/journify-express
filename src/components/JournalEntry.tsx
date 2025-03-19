@@ -1,10 +1,16 @@
-
 import React from 'react';
 import { format } from 'date-fns';
-import { JournalEntry as JournalEntryType } from '@/utils/journalStore';
 import { cn } from '@/lib/utils';
 import { Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
+
+interface JournalEntryType {
+  id: string;
+  date: string;
+  content: string;
+  energy: number;
+  productivity: number;
+}
 
 interface JournalEntryProps {
   entry: JournalEntryType;

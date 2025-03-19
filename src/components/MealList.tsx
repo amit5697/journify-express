@@ -1,12 +1,26 @@
-
-import React, { useState } from 'react';
-import { useDietStore, Meal } from '@/utils/dietStore';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Edit, Trash2, Coffee, Utensils, Pizza, Cookie } from 'lucide-react';
 import MealForm from './MealForm';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+interface Meal {
+  id: string;
+  date: string;
+  type: MealType;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  notes?: string;
+}
 
 const mealTypeIcons = {
   breakfast: <Coffee className="h-4 w-4" />,
@@ -23,10 +37,70 @@ const mealTypeColors = {
 };
 
 const MealList: React.FC = () => {
-  const { meals, deleteMeal } = useDietStore();
+  const [meals, setMeals] = useState<Meal[]>([]);
   const [editingMealId, setEditingMealId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMeals = async () => {
+      setLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('meals')
+          .select('*')
+          .order('date', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching meals:', error);
+          toast.error('Failed to load meals');
+        } else {
+          setMeals(data || []);
+        }
+      } catch (error) {
+        console.error('Error in fetchMeals:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchMeals();
+    
+    const subscription = supabase
+      .channel('meal_changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'meals' 
+      }, (payload) => {
+        fetchMeals();
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  const handleDeleteMeal = async (mealId: string) => {
+    try {
+      const { error } = await supabase
+        .from('meals')
+        .delete()
+        .eq('id', mealId);
+      
+      if (error) {
+        toast.error('Failed to delete meal');
+        console.error(error);
+      } else {
+        toast.success('Meal deleted successfully');
+        setMeals(prevMeals => prevMeals.filter(m => m.id !== mealId));
+      }
+    } catch (error) {
+      console.error('Error in handleDeleteMeal:', error);
+    }
+  };
   
-  // Group meals by date
   const mealsByDate = meals.reduce<Record<string, Meal[]>>((acc, meal) => {
     const date = meal.date;
     if (!acc[date]) {
@@ -36,7 +110,6 @@ const MealList: React.FC = () => {
     return acc;
   }, {});
   
-  // Sort dates in descending order (most recent first)
   const sortedDates = Object.keys(mealsByDate).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
   );
@@ -132,7 +205,7 @@ const MealList: React.FC = () => {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMeal(meal.id)}>
+                          <AlertDialogAction onClick={() => handleDeleteMeal(meal.id)}>
                             Delete
                           </AlertDialogAction>
                         </AlertDialogFooter>
