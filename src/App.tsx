@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,16 +12,31 @@ import DietPlanner from "./pages/DietPlanner";
 import SignIn from "./pages/SignIn";
 import NotFound from "./pages/NotFound";
 import GeminiChatbot from "./components/GeminiChatbot";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
-// Protected route component
+// Protected route component that uses Supabase authentication
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    setIsAuthenticated(!!user);
+    // Check for an active session
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsAuthenticated(!!data.session);
+    };
+    
+    checkSession();
+    
+    // Subscribe to auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
   
   if (isAuthenticated === null) {

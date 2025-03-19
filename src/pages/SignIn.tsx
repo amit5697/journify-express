@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,46 +8,95 @@ import { useNavigate } from 'react-router-dom';
 import { BookOpen, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { Helmet } from 'react-helmet-async';
+import { supabase } from '@/integrations/supabase/client';
 
 const SignIn: React.FC = () => {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    // Check if user is already signed in
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate('/journal');
+      }
+    };
     
-    // Simple validation
-    if (!name.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
+    checkSession();
+  }, [navigate]);
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
     
     if (!email.trim() || !email.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
     }
     
+    if (!password.trim() || password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Simulate authentication process
-    setTimeout(() => {
-      // Store user info in localStorage
-      localStorage.setItem('user', JSON.stringify({ name, email }));
+    if (isSignUp) {
+      // Handle sign up
+      if (!name.trim()) {
+        toast.error('Please enter your name');
+        setIsLoading(false);
+        return;
+      }
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          }
+        }
+      });
+      
+      if (error) {
+        toast.error(error.message);
+        setIsLoading(false);
+        return;
+      }
+      
+      toast.success('Account created successfully! Please check your email to verify your account.');
+      setIsSignUp(false);
+    } else {
+      // Handle sign in
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        toast.error(error.message);
+        setIsLoading(false);
+        return;
+      }
       
       toast.success('Successfully signed in!');
       navigate('/journal');
-      setIsLoading(false);
-    }, 1000);
+    }
+    
+    setIsLoading(false);
   };
 
   return (
     <>
       <Helmet>
-        <title>Sign In - Daily Journal</title>
-        <meta name="description" content="Sign in to Daily Journal to track your thoughts, energy levels, and productivity." />
-        <meta property="og:title" content="Sign In - Daily Journal" />
+        <title>{isSignUp ? 'Sign Up' : 'Sign In'} - Daily Journal</title>
+        <meta name="description" content={isSignUp ? 'Create an account to start your journal' : 'Sign in to Daily Journal to track your thoughts, energy levels, and productivity.'} />
+        <meta property="og:title" content={`${isSignUp ? 'Sign Up' : 'Sign In'} - Daily Journal`} />
         <meta property="og:description" content="Access your personal journal and meal planning tools." />
         <meta property="og:image" content="/signin-preview.png" />
       </Helmet>
@@ -65,25 +114,29 @@ const SignIn: React.FC = () => {
         <main className="flex-1 flex items-center justify-center p-6">
           <Card className="w-full max-w-md">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
+              <CardTitle className="text-2xl font-bold text-center">
+                {isSignUp ? 'Create an Account' : 'Welcome Back'}
+              </CardTitle>
               <CardDescription className="text-center">
-                Enter your details to access your journal
+                {isSignUp ? 'Enter your details to create your account' : 'Enter your details to access your journal'}
               </CardDescription>
             </CardHeader>
             
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSignIn}>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input 
-                    id="name" 
-                    type="text" 
-                    placeholder="Enter your name" 
-                    value={name} 
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
+                {isSignUp && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input 
+                      id="name" 
+                      type="text" 
+                      placeholder="Enter your name" 
+                      value={name} 
+                      onChange={(e) => setName(e.target.value)}
+                      required={isSignUp}
+                    />
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -96,17 +149,57 @@ const SignIn: React.FC = () => {
                     required
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    placeholder="Enter your password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
               </CardContent>
               
-              <CardFooter>
+              <CardFooter className="flex flex-col space-y-4">
                 <Button 
                   type="submit" 
                   className="w-full button-hover"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Signing in...' : 'Sign In'}
+                  {isLoading 
+                    ? (isSignUp ? 'Creating account...' : 'Signing in...') 
+                    : (isSignUp ? 'Create Account' : 'Sign In')}
                   <LogIn className="ml-2 h-4 w-4" />
                 </Button>
+                
+                <div className="text-center text-sm">
+                  {isSignUp ? (
+                    <span>
+                      Already have an account?{' '}
+                      <button 
+                        type="button" 
+                        className="text-primary hover:underline" 
+                        onClick={() => setIsSignUp(false)}
+                      >
+                        Sign in
+                      </button>
+                    </span>
+                  ) : (
+                    <span>
+                      Don't have an account?{' '}
+                      <button 
+                        type="button" 
+                        className="text-primary hover:underline" 
+                        onClick={() => setIsSignUp(true)}
+                      >
+                        Create one
+                      </button>
+                    </span>
+                  )}
+                </div>
               </CardFooter>
             </form>
           </Card>
