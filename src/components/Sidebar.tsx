@@ -9,9 +9,20 @@ import { supabase } from '@/integrations/supabase/client';
 interface SidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  // Added new props to match what's being passed in Journal.tsx
+  expanded?: boolean;
+  onToggle?: () => void;
+  onNewEntry?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  isOpen, 
+  setIsOpen,
+  // Use the new props if provided, otherwise use the existing ones for backward compatibility
+  expanded = isOpen,
+  onToggle = () => setIsOpen(!isOpen),
+  onNewEntry
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -68,11 +79,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     },
   ];
 
+  // Use expanded instead of isOpen
   return (
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-50 w-72 bg-background border-r border-border transition-transform duration-300 transform lg:translate-x-0 flex flex-col h-full",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        expanded ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <div className="px-6 py-8 border-b border-border">
@@ -107,6 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
           <div className="space-y-1">
             <Link
               to="/journal"
+              onClick={onNewEntry} // Use onNewEntry prop here
               className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
             >
               <PlusCircle className="w-5 h-5" />

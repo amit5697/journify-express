@@ -48,6 +48,8 @@ const Journal: React.FC = () => {
       </Helmet>
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar 
+          isOpen={sidebarExpanded}
+          setIsOpen={setSidebarExpanded}
           onNewEntry={handleNewEntry} 
           expanded={sidebarExpanded}
           onToggle={toggleSidebar}
