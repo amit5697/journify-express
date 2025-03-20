@@ -8,6 +8,7 @@ import RatingSelector from './RatingSelector';
 import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface JournalEntry {
   id: string;
@@ -34,6 +35,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Get current user ID
   useEffect(() => {
@@ -41,9 +43,10 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
-        console.log("Current user ID:", user.id); // Debug: Log user ID
+        console.log("Current user ID:", user.id);
       } else {
-        console.log("No user found"); // Debug: Log when no user
+        console.log("No user found");
+        setError("You must be logged in to save entries");
       }
     };
     
@@ -95,21 +98,30 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     
     try {
       if (!entry.content) {
-        toast.error("Please write something about your day");
+        setError("Please write something about your day");
         setIsLoading(false);
         return;
       }
       
       if (!userId) {
-        toast.error("You must be logged in to save entries");
+        setError("You must be logged in to save entries");
         setIsLoading(false);
         return;
       }
       
-      console.log("Saving entry for user:", userId); // Debug: Log saving action
+      // Double check that we have a user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("User session expired. Please log in again.");
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("Saving entry for user:", user.id);
       
       if (entryId) {
         // Update existing entry
@@ -125,37 +137,35 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           .eq('id', entryId);
         
         if (error) {
-          console.error("Update error:", error); // Debug: Log update error
-          throw error;
+          console.error("Update error:", error);
+          setError(`Error updating entry: ${error.message}`);
+          return;
         }
         toast.success("Journal entry updated");
       } else {
-        // Create new entry
-        console.log("Creating new entry with data:", {
-          date: entry.date,
-          content: entry.content,
-          energy: entry.energy,
-          productivity: entry.productivity,
-          user_id: userId
-        }); // Debug: Log creation data
+        // Create new entry with explicit user_id
+        const newEntry = {
+          date: entry.date as string,
+          content: entry.content as string,
+          energy: entry.energy as number,
+          productivity: entry.productivity as number,
+          user_id: user.id
+        };
+        
+        console.log("Creating new entry with data:", newEntry);
         
         const { data, error } = await supabase
           .from('journal_entries')
-          .insert({
-            date: entry.date as string,
-            content: entry.content as string,
-            energy: entry.energy as number,
-            productivity: entry.productivity as number,
-            user_id: userId
-          })
+          .insert(newEntry)
           .select();
         
         if (error) {
-          console.error("Insert error:", error); // Debug: Log insert error
-          throw error;
+          console.error("Insert error:", error);
+          setError(`Error creating entry: ${error.message}`);
+          return;
         }
         
-        console.log("Entry created:", data); // Debug: Log created entry
+        console.log("Entry created successfully:", data);
         toast.success("New journal entry created");
         
         // Reset form if it's a new entry
@@ -169,12 +179,12 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
       
       // Call onSave callback to refresh the entries list
       if (onSave) {
-        console.log("Calling onSave callback"); // Debug: Log callback
+        console.log("Calling onSave callback");
         onSave();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving journal entry:', error);
-      toast.error("Something went wrong");
+      setError(error?.message || "Something went wrong");
     } finally {
       setIsLoading(false);
     }
@@ -226,6 +236,14 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           </div>
         </CardHeader>
         
+        {error && (
+          <div className="px-6">
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
         <CardContent className="flex-grow space-y-6 overflow-y-auto">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground">Date</label>
@@ -233,7 +251,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
               type="date"
               value={entry.date}
               onChange={(e) => handleChange('date', e.target.value)}
-              className="form-input"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
           
@@ -243,7 +261,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
               value={entry.content}
               onChange={(e) => handleChange('content', e.target.value)}
               placeholder="Write about your day..."
-              className="form-input min-h-[150px] resize-none"
+              className="min-h-[150px] resize-none"
             />
           </div>
           
@@ -265,7 +283,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         <CardFooter className="border-t bg-muted/10 py-4">
           <Button 
             type="submit" 
-            className="w-full button-hover"
+            className="w-full"
             disabled={isLoading || !userId}
           >
             {isLoading ? 'Saving...' : entryId ? 'Update Entry' : 'Save Entry'}
