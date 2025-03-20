@@ -37,16 +37,37 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Get current user ID
+  // Get current user ID from the profiles table, not directly from auth
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        console.log("Current user ID:", user.id);
-      } else {
-        console.log("No user found");
-        setError("You must be logged in to save entries");
+      try {
+        // First get the authenticated user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.log("No authenticated user found");
+          setError("You must be logged in to save entries");
+          return;
+        }
+        
+        // Then get the profile associated with this user
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+        
+        if (profileError || !profile) {
+          console.error("Profile error:", profileError);
+          setError("Your user profile couldn't be loaded. Please try logging out and back in.");
+          return;
+        }
+        
+        setUserId(profile.id);
+        console.log("Current user profile ID:", profile.id);
+      } catch (error) {
+        console.error("Error getting user:", error);
+        setError("An error occurred while getting your user information");
       }
     };
     
@@ -113,15 +134,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         return;
       }
       
-      // Double check that we have a user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError("User session expired. Please log in again.");
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log("Saving entry for user:", user.id);
+      console.log("Saving entry for user profile ID:", userId);
       
       if (entryId) {
         // Update existing entry
@@ -149,7 +162,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           content: entry.content as string,
           energy: entry.energy as number,
           productivity: entry.productivity as number,
-          user_id: user.id
+          user_id: userId // Use the profile ID
         };
         
         console.log("Creating new entry with data:", newEntry);
