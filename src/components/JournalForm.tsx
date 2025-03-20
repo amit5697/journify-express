@@ -37,7 +37,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Get current user ID from the profiles table, not directly from auth
+  // Get current user ID from auth and ensure profile exists
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -50,21 +50,42 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           return;
         }
         
-        // Then get the profile associated with this user
+        console.log("Auth user found:", user.id);
+        
+        // Check if profile exists
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, name')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
-        if (profileError || !profile) {
-          console.error("Profile error:", profileError);
-          setError("Your user profile couldn't be loaded. Please try logging out and back in.");
+        if (profileError) {
+          console.error("Error checking profile:", profileError);
+          setError("Error checking your user profile");
           return;
         }
         
-        setUserId(profile.id);
-        console.log("Current user profile ID:", profile.id);
+        if (!profile) {
+          console.log("Profile not found, creating one");
+          // Create profile if it doesn't exist
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([{ 
+              id: user.id, 
+              name: user.user_metadata.name || user.email?.split('@')[0] || 'User'
+            }]);
+            
+          if (insertError) {
+            console.error("Error creating profile:", insertError);
+            setError("Failed to create your user profile");
+            return;
+          }
+          
+          setUserId(user.id);
+        } else {
+          console.log("Profile found:", profile.id);
+          setUserId(profile.id);
+        }
       } catch (error) {
         console.error("Error getting user:", error);
         setError("An error occurred while getting your user information");
@@ -162,7 +183,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           content: entry.content as string,
           energy: entry.energy as number,
           productivity: entry.productivity as number,
-          user_id: userId // Use the profile ID
+          user_id: userId
         };
         
         console.log("Creating new entry with data:", newEntry);

@@ -56,42 +56,106 @@ const SignIn: React.FC = () => {
         return;
       }
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
+      try {
+        // Sign up with email and password
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+            }
+          }
+        });
+        
+        if (error) {
+          setError(error.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Verify that the profile was created
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user?.id)
+          .single();
+          
+        if (profileError) {
+          console.error("Profile not created automatically, creating manually:", profileError);
+          
+          // If profile doesn't exist, create it manually
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([{ id: data.user?.id, name }]);
+            
+          if (insertError) {
+            console.error("Error creating profile manually:", insertError);
+            setError("Failed to create user profile. Please try again.");
+            setIsLoading(false);
+            return;
           }
         }
-      });
-      
-      if (error) {
-        setError(error.message);
+        
+        toast.success('Account created successfully! Please check your email to verify your account.');
+        setIsSignUp(false);
+      } catch (err) {
+        console.error("Signup error:", err);
+        setError("An unexpected error occurred during signup");
+      } finally {
         setIsLoading(false);
-        return;
       }
-      
-      toast.success('Account created successfully! Please check your email to verify your account.');
-      setIsSignUp(false);
     } else {
       // Handle sign in
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        setError(error.message);
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (error) {
+          setError(error.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Verify that the profile exists
+        if (data.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .maybeSingle();
+            
+          if (profileError) {
+            console.error("Error checking profile:", profileError);
+          } else if (!profile) {
+            console.log("Profile doesn't exist, creating one");
+            
+            // Create profile if it doesn't exist
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert([{ 
+                id: data.user.id, 
+                name: data.user.user_metadata.name || email.split('@')[0] 
+              }]);
+              
+            if (insertError) {
+              console.error("Error creating profile:", insertError);
+              // Continue anyway, don't block login
+            }
+          }
+        }
+        
+        toast.success('Successfully signed in!');
+        navigate('/journal');
+      } catch (err) {
+        console.error("Signin error:", err);
+        setError("An unexpected error occurred during sign in");
+      } finally {
         setIsLoading(false);
-        return;
       }
-      
-      toast.success('Successfully signed in!');
-      navigate('/journal');
     }
-    
-    setIsLoading(false);
   };
 
   const handleGoogleSignIn = async () => {
