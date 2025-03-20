@@ -33,9 +33,17 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
   // Get current user ID
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          console.log("Auth user found:", user.id);
+          setUserId(user.id);
+        } else {
+          console.log("No user found");
+        }
+      } catch (error) {
+        console.error("Error getting user:", error);
+        toast.error("Error retrieving user information");
       }
     };
     
@@ -46,28 +54,34 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
     const fetchMeal = async () => {
       if (mealId) {
         setIsLoading(true);
-        const { data, error } = await supabase
-          .from('meals')
-          .select('*')
-          .eq('id', mealId)
-          .single();
-        
-        if (error) {
-          toast.error('Error loading meal data');
-          console.error(error);
-        } else if (data) {
-          setFormData({
-            type: data.type as MealType,
-            name: data.name,
-            calories: data.calories || 0,
-            protein: data.protein || 0,
-            carbs: data.carbs || 0,
-            fat: data.fat || 0,
-            notes: data.notes || '',
-            date: data.date,
-          });
+        try {
+          const { data, error } = await supabase
+            .from('meals')
+            .select('*')
+            .eq('id', mealId)
+            .single();
+          
+          if (error) {
+            toast.error('Error loading meal data');
+            console.error(error);
+          } else if (data) {
+            setFormData({
+              type: data.type as MealType,
+              name: data.name,
+              calories: data.calories || 0,
+              protein: data.protein || 0,
+              carbs: data.carbs || 0,
+              fat: data.fat || 0,
+              notes: data.notes || '',
+              date: data.date,
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching meal:", error);
+          toast.error("Failed to load meal details");
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       }
     };
     
@@ -151,9 +165,9 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
       }
       
       onSave();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving meal:', error);
-      toast.error('Something went wrong');
+      toast.error(error.message || 'Something went wrong');
     } finally {
       setIsLoading(false);
     }

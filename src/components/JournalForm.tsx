@@ -37,7 +37,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Get current user ID and ensure profile exists
+  // Get current user ID
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -54,59 +54,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         }
         
         console.log("Auth user found:", user.id);
-        
-        // Check if profile exists
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, name')
-          .eq('id', user.id)
-          .maybeSingle();
-        
-        if (profileError) {
-          console.error("Error checking profile:", profileError);
-          setError("Error checking your user profile");
-          setIsLoading(false);
-          return;
-        }
-        
-        if (!profile) {
-          console.log("Profile not found, creating one");
-          // Create profile if it doesn't exist
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert([{ 
-              id: user.id, 
-              name: user.user_metadata.name || user.email?.split('@')[0] || 'User'
-            }]);
-            
-          if (insertError) {
-            console.error("Error creating profile:", insertError);
-            setError("Failed to create your user profile. Please try refreshing the page.");
-            setIsLoading(false);
-            return;
-          }
-          
-          // Get the newly created profile
-          const { data: newProfile, error: newProfileError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', user.id)
-            .single();
-            
-          if (newProfileError || !newProfile) {
-            console.error("Error verifying new profile:", newProfileError);
-            setError("Created profile but failed to verify it");
-            setIsLoading(false);
-            return;
-          }
-          
-          setUserId(newProfile.id);
-          console.log("New profile created and verified:", newProfile.id);
-        } else {
-          console.log("Profile found:", profile.id);
-          setUserId(profile.id);
-        }
-        
+        setUserId(user.id);
         setIsLoading(false);
       } catch (error) {
         console.error("Error getting user:", error);
@@ -123,25 +71,31 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
     const fetchEntry = async () => {
       if (entryId) {
         setIsLoading(true);
-        const { data, error } = await supabase
-          .from('journal_entries')
-          .select('*')
-          .eq('id', entryId)
-          .single();
-        
-        if (error) {
-          toast.error('Error loading journal entry');
-          console.error(error);
-        } else if (data) {
-          setEntry({
-            id: data.id,
-            date: data.date,
-            content: data.content,
-            energy: data.energy,
-            productivity: data.productivity
-          });
+        try {
+          const { data, error } = await supabase
+            .from('journal_entries')
+            .select('*')
+            .eq('id', entryId)
+            .single();
+          
+          if (error) {
+            toast.error('Error loading journal entry');
+            console.error(error);
+          } else if (data) {
+            setEntry({
+              id: data.id,
+              date: data.date,
+              content: data.content,
+              energy: data.energy,
+              productivity: data.productivity
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching entry:", error);
+          toast.error("Failed to load journal entry");
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       } else {
         // Reset form if no entryId is provided (new entry)
         setEntry({
@@ -182,33 +136,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           return;
         }
         
-        // Check profile one more time
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .maybeSingle();
-          
-        if (!profile) {
-          // Last attempt to create profile
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert([{ 
-              id: user.id, 
-              name: user.user_metadata.name || user.email?.split('@')[0] || 'User'
-            }]);
-            
-          if (insertError) {
-            console.error("Final attempt to create profile failed:", insertError);
-            setError("Could not create your user profile. Please try signing out and back in.");
-            setIsLoading(false);
-            return;
-          }
-          
-          setUserId(user.id);
-        } else {
-          setUserId(profile.id);
-        }
+        setUserId(user.id);
       }
       
       if (!userId) {
@@ -217,7 +145,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         return;
       }
       
-      console.log("Saving entry for user profile ID:", userId);
+      console.log("Saving entry for user ID:", userId);
       
       if (entryId) {
         // Update existing entry
@@ -239,7 +167,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         }
         toast.success("Journal entry updated");
       } else {
-        // Create new entry with explicit user_id
+        // Create new entry
         const newEntry = {
           date: entry.date as string,
           content: entry.content as string,
@@ -292,19 +220,25 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
     // Confirm before deleting
     if (window.confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) {
       setIsLoading(true);
-      const { error } = await supabase
-        .from('journal_entries')
-        .delete()
-        .eq('id', entryId);
-      
-      if (error) {
-        console.error('Error deleting entry:', error);
-        toast.error('Error deleting entry');
-      } else {
-        toast.success('Journal entry deleted');
-        if (onSave) onSave();
+      try {
+        const { error } = await supabase
+          .from('journal_entries')
+          .delete()
+          .eq('id', entryId);
+        
+        if (error) {
+          console.error('Error deleting entry:', error);
+          toast.error('Error deleting entry');
+        } else {
+          toast.success('Journal entry deleted');
+          if (onSave) onSave();
+        }
+      } catch (error) {
+        console.error("Error deleting entry:", error);
+        toast.error("Failed to delete entry");
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
   };
   
@@ -354,7 +288,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground">How was your day?</label>
             <Textarea
-              value={entry.content}
+              value={entry.content || ''}
               onChange={(e) => handleChange('content', e.target.value)}
               placeholder="Write about your day..."
               className="min-h-[150px] resize-none"
