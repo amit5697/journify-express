@@ -37,16 +37,19 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Get current user ID from auth and ensure profile exists
+  // Get current user ID and ensure profile exists
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
+        setIsLoading(true);
+        
         // First get the authenticated user
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
           console.log("No authenticated user found");
           setError("You must be logged in to save entries");
+          setIsLoading(false);
           return;
         }
         
@@ -62,6 +65,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
         if (profileError) {
           console.error("Error checking profile:", profileError);
           setError("Error checking your user profile");
+          setIsLoading(false);
           return;
         }
         
@@ -77,18 +81,37 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
             
           if (insertError) {
             console.error("Error creating profile:", insertError);
-            setError("Failed to create your user profile");
+            setError("Failed to create your user profile. Please try refreshing the page.");
+            setIsLoading(false);
             return;
           }
           
-          setUserId(user.id);
+          // Get the newly created profile
+          const { data: newProfile, error: newProfileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .single();
+            
+          if (newProfileError || !newProfile) {
+            console.error("Error verifying new profile:", newProfileError);
+            setError("Created profile but failed to verify it");
+            setIsLoading(false);
+            return;
+          }
+          
+          setUserId(newProfile.id);
+          console.log("New profile created and verified:", newProfile.id);
         } else {
           console.log("Profile found:", profile.id);
           setUserId(profile.id);
         }
+        
+        setIsLoading(false);
       } catch (error) {
         console.error("Error getting user:", error);
         setError("An error occurred while getting your user information");
+        setIsLoading(false);
       }
     };
     
@@ -150,7 +173,46 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
       }
       
       if (!userId) {
-        setError("You must be logged in to save entries");
+        // Try to get user again if userId is not set
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          setError("You must be logged in to save entries");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Check profile one more time
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (!profile) {
+          // Last attempt to create profile
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([{ 
+              id: user.id, 
+              name: user.user_metadata.name || user.email?.split('@')[0] || 'User'
+            }]);
+            
+          if (insertError) {
+            console.error("Final attempt to create profile failed:", insertError);
+            setError("Could not create your user profile. Please try signing out and back in.");
+            setIsLoading(false);
+            return;
+          }
+          
+          setUserId(user.id);
+        } else {
+          setUserId(profile.id);
+        }
+      }
+      
+      if (!userId) {
+        setError("Could not determine your user ID. Please try signing out and back in.");
         setIsLoading(false);
         return;
       }

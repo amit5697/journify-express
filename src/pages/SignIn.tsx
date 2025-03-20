@@ -32,6 +32,48 @@ const SignIn: React.FC = () => {
     checkSession();
   }, [navigate]);
 
+  const createProfile = async (userId: string, userName: string) => {
+    try {
+      // First check if profile already exists
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profileCheckError) {
+        console.error("Error checking profile:", profileCheckError);
+        return false;
+      }
+      
+      // If profile exists, return success
+      if (existingProfile) {
+        console.log("Profile already exists:", existingProfile);
+        return true;
+      }
+      
+      // Create profile if it doesn't exist
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([{ 
+          id: userId, 
+          name: userName || email.split('@')[0]
+        }]);
+        
+      if (insertError) {
+        console.error("Error creating profile:", insertError);
+        toast.error("Failed to create user profile");
+        return false;
+      }
+      
+      console.log("Profile created successfully for user:", userId);
+      return true;
+    } catch (err) {
+      console.error("Error in profile creation:", err);
+      return false;
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -74,27 +116,19 @@ const SignIn: React.FC = () => {
           return;
         }
         
-        // Verify that the profile was created
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user?.id)
-          .single();
-          
-        if (profileError) {
-          console.error("Profile not created automatically, creating manually:", profileError);
-          
-          // If profile doesn't exist, create it manually
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert([{ id: data.user?.id, name }]);
-            
-          if (insertError) {
-            console.error("Error creating profile manually:", insertError);
-            setError("Failed to create user profile. Please try again.");
-            setIsLoading(false);
-            return;
-          }
+        if (!data.user) {
+          setError("Signup failed: No user was created");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Create profile for the new user
+        const profileCreated = await createProfile(data.user.id, name);
+        
+        if (!profileCreated) {
+          setError("Failed to create user profile. Please try again or contact support.");
+          setIsLoading(false);
+          return;
         }
         
         toast.success('Account created successfully! Please check your email to verify your account.');
@@ -119,32 +153,20 @@ const SignIn: React.FC = () => {
           return;
         }
         
-        // Verify that the profile exists
-        if (data.user) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .maybeSingle();
-            
-          if (profileError) {
-            console.error("Error checking profile:", profileError);
-          } else if (!profile) {
-            console.log("Profile doesn't exist, creating one");
-            
-            // Create profile if it doesn't exist
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert([{ 
-                id: data.user.id, 
-                name: data.user.user_metadata.name || email.split('@')[0] 
-              }]);
-              
-            if (insertError) {
-              console.error("Error creating profile:", insertError);
-              // Continue anyway, don't block login
-            }
-          }
+        if (!data.user) {
+          setError("Login failed: User authentication failed");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Ensure profile exists for the user
+        const profileCreated = await createProfile(
+          data.user.id, 
+          data.user.user_metadata.name || email.split('@')[0]
+        );
+        
+        if (!profileCreated) {
+          console.warn("Could not verify user profile, but continuing with login");
         }
         
         toast.success('Successfully signed in!');
