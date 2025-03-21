@@ -24,7 +24,20 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     persistSession: true,
     storage: localStorage,
-    // Set the redirect URL to the current site
-    redirectTo: `${getSiteUrl()}/journal`
+    // Set the redirect URL as an option - using a valid property name
+    flowType: 'pkce',
+    detectSessionInUrl: true,
+    debug: false
   }
 });
+
+// Helper function to set the auth redirect URL
+export const configureAuthRedirect = () => {
+  const redirectUrl = `${getSiteUrl()}/journal`;
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUrl
+    }
+  });
+};

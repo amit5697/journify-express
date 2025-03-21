@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,21 +58,21 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
             .from('meals')
             .select('*')
             .eq('id', mealId)
-            .single();
+            .maybeSingle();
           
           if (error) {
             toast.error('Error loading meal data');
             console.error(error);
           } else if (data) {
             setFormData({
-              type: data.type as MealType,
-              name: data.name,
+              type: (data.type || 'breakfast') as MealType,
+              name: data.name || '',
               calories: data.calories || 0,
               protein: data.protein || 0,
               carbs: data.carbs || 0,
               fat: data.fat || 0,
               notes: data.notes || '',
-              date: data.date,
+              date: data.date || new Date().toISOString().split('T')[0],
             });
           }
         } catch (error) {
@@ -128,37 +127,41 @@ const MealForm: React.FC<MealFormProps> = ({ mealId, onSave, onCancel }) => {
     
     try {
       if (mealId) {
+        const updateData = {
+          name: formData.name,
+          type: formData.type,
+          calories: formData.calories,
+          protein: formData.protein,
+          carbs: formData.carbs,
+          fat: formData.fat,
+          notes: formData.notes,
+          date: formData.date,
+          updated_at: new Date().toISOString()
+        };
+        
         const { error } = await supabase
           .from('meals')
-          .update({
-            type: formData.type,
-            name: formData.name,
-            calories: formData.calories,
-            protein: formData.protein,
-            carbs: formData.carbs,
-            fat: formData.fat,
-            notes: formData.notes,
-            date: formData.date,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', mealId);
         
         if (error) throw error;
         toast.success('Meal updated successfully');
       } else {
+        const newMeal = {
+          name: formData.name,
+          type: formData.type,
+          calories: formData.calories,
+          protein: formData.protein,
+          carbs: formData.carbs,
+          fat: formData.fat,
+          notes: formData.notes,
+          date: formData.date,
+          user_id: userId
+        };
+        
         const { error } = await supabase
           .from('meals')
-          .insert({
-            type: formData.type,
-            name: formData.name,
-            calories: formData.calories,
-            protein: formData.protein,
-            carbs: formData.carbs,
-            fat: formData.fat,
-            notes: formData.notes,
-            date: formData.date,
-            user_id: userId
-          });
+          .insert(newMeal);
         
         if (error) throw error;
         toast.success('Meal added successfully');

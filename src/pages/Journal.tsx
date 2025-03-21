@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import JournalForm from '@/components/JournalForm';
@@ -61,9 +60,16 @@ const Journal: React.FC = () => {
       if (error) {
         console.error('Error fetching journal entries:', error);
         toast.error('Failed to load journal entries');
-      } else {
+      } else if (data) {
         console.log("Fetched entries:", data); // Debug: Log fetched entries
-        setEntries(data || []);
+        const typedEntries: JournalEntryType[] = data.map(entry => ({
+          id: entry.id,
+          date: entry.date,
+          content: entry.content || '',
+          energy: entry.energy || 5,
+          productivity: entry.productivity || 5
+        }));
+        setEntries(typedEntries);
       }
       
       setIsLoading(false);
@@ -130,9 +136,16 @@ const Journal: React.FC = () => {
       
       if (error) {
         console.error('Error refreshing entries:', error);
-      } else {
+      } else if (data) {
         console.log("Refreshed entries:", data); // Debug: Log refreshed entries
-        setEntries(data || []);
+        const typedEntries: JournalEntryType[] = data.map(entry => ({
+          id: entry.id,
+          date: entry.date,
+          content: entry.content || '',
+          energy: entry.energy || 5,
+          productivity: entry.productivity || 5
+        }));
+        setEntries(typedEntries);
       }
     };
     

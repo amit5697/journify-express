@@ -56,9 +56,17 @@ const MealList: React.FC = () => {
           console.error('Error fetching meals:', error);
           toast.error('Failed to load meals');
         } else if (data) {
-          const typedMeals = data.map(meal => ({
-            ...meal,
-            type: meal.type as MealType
+          const typedMeals: Meal[] = data.map(meal => ({
+            id: meal.id,
+            date: meal.date,
+            type: (meal.type || 'breakfast') as MealType,
+            name: meal.name,
+            calories: meal.calories || 0,
+            protein: meal.protein || 0,
+            carbs: meal.carbs || 0,
+            fat: meal.fat || 0,
+            notes: meal.notes || '',
+            user_id: meal.user_id
           }));
           setMeals(typedMeals);
         }

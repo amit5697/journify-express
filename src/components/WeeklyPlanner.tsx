@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,9 +58,17 @@ const WeeklyPlanner: React.FC = () => {
           console.error('Error fetching meals:', error);
         } else if (data) {
           // Convert the data to ensure type property is a valid MealType
-          const typedMeals = data.map(meal => ({
-            ...meal,
-            type: meal.type as MealType
+          const typedMeals: Meal[] = data.map(meal => ({
+            id: meal.id,
+            date: meal.date,
+            type: (meal.type || 'breakfast') as MealType,
+            name: meal.name,
+            calories: meal.calories || 0,
+            protein: meal.protein || 0,
+            carbs: meal.carbs || 0,
+            fat: meal.fat || 0,
+            notes: meal.notes || '',
+            user_id: meal.user_id
           }));
           setMeals(typedMeals);
         }

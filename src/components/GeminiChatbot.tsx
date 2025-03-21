@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,10 +21,11 @@ interface Message {
 }
 
 interface JournalEntry {
+  id?: string;
   date: string;
-  content: string;
-  energy: number;
-  productivity: number;
+  content: string | null;
+  energy: number | null;
+  productivity: number | null;
 }
 
 interface ChatbotProps {
@@ -67,8 +69,14 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
       
       if (error) {
         console.error('Error fetching journal entries:', error);
-      } else {
-        setJournalEntries(data || []);
+      } else if (data) {
+        const typedEntries: JournalEntry[] = data.map(entry => ({
+          date: entry.date,
+          content: entry.content,
+          energy: entry.energy,
+          productivity: entry.productivity
+        }));
+        setJournalEntries(typedEntries);
       }
     } catch (error) {
       console.error('Error fetching journal entries:', error);
@@ -125,9 +133,9 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
     
     return journalEntries.map(entry => {
       return `Date: ${entry.date}
-Content: ${entry.content}
-Energy Level: ${entry.energy}/10
-Productivity Level: ${entry.productivity}/10
+Content: ${entry.content || 'No content'}
+Energy Level: ${entry.energy || 'N/A'}/10
+Productivity Level: ${entry.productivity || 'N/A'}/10
 ---`;
     }).join("\n");
   };

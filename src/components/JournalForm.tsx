@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Database } from '@/integrations/supabase/types';
 
 interface JournalEntry {
   id: string;
@@ -76,7 +76,7 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
             .from('journal_entries')
             .select('*')
             .eq('id', entryId)
-            .single();
+            .maybeSingle();
           
           if (error) {
             toast.error('Error loading journal entry');
@@ -85,9 +85,9 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
             setEntry({
               id: data.id,
               date: data.date,
-              content: data.content,
-              energy: data.energy,
-              productivity: data.productivity
+              content: data.content || '',
+              energy: data.energy || 5,
+              productivity: data.productivity || 5
             });
           }
         } catch (error) {
@@ -149,15 +149,17 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
       
       if (entryId) {
         // Update existing entry
+        const updateData = {
+          date: entry.date || today,
+          content: entry.content || '',
+          energy: entry.energy || 5,
+          productivity: entry.productivity || 5,
+          updated_at: new Date().toISOString()
+        };
+        
         const { error } = await supabase
           .from('journal_entries')
-          .update({
-            date: entry.date,
-            content: entry.content,
-            energy: entry.energy,
-            productivity: entry.productivity,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', entryId);
         
         if (error) {
@@ -169,10 +171,10 @@ const JournalForm: React.FC<JournalFormProps> = ({ entryId, onSave }) => {
       } else {
         // Create new entry
         const newEntry = {
-          date: entry.date as string,
-          content: entry.content as string,
-          energy: entry.energy as number,
-          productivity: entry.productivity as number,
+          date: entry.date || today,
+          content: entry.content || '',
+          energy: entry.energy || 5,
+          productivity: entry.productivity || 5,
           user_id: userId
         };
         
