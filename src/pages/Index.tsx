@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -76,8 +77,8 @@ const Index = () => {
             
             <div className="aspect-square rounded-2xl overflow-hidden border border-border shadow-xl animate-in relative">
               <img 
-                src="https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=1200&q=80" 
-                alt="Journal with pen" 
+                src="https://images.unsplash.com/photo-1649972904349-6e44c42644a7" 
+                alt="Person journaling with a laptop" 
                 className="object-cover w-full h-full"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent z-0"></div>
