@@ -8,12 +8,24 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 // Get the current site URL dynamically
 const getSiteUrl = () => {
-  let url = window.location.origin;
-  // If we're on localhost but the URL includes a port, ensure we're not using localhost:3000
-  if (url.includes('localhost')) {
-    url = `${window.location.protocol}//${window.location.host}`;
+  let url;
+  
+  // Check if we're in a browser environment
+  if (typeof window !== 'undefined') {
+    url = window.location.origin;
+    
+    // For production deployments, use the origin as is
+    if (!url.includes('localhost')) {
+      return url;
+    }
+    
+    // For development, localhost points to the Supabase project URL since the callback
+    // can't go to localhost directly (causing the error)
+    return 'https://lovable.dev';
   }
-  return url;
+  
+  // If running in a non-browser environment, provide a fallback
+  return 'https://lovable.dev';
 };
 
 // Import the supabase client like this:
@@ -24,7 +36,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     persistSession: true,
     storage: localStorage,
-    // Set the redirect URL as an option - using a valid property name
     flowType: 'pkce',
     detectSessionInUrl: true,
     debug: false
