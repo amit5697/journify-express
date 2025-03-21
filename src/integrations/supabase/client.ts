@@ -6,7 +6,25 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://kgvyriqvlmrmdjocwirj.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtndnlyaXF2bG1ybWRqb2N3aXJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzNjI4MzcsImV4cCI6MjA1NzkzODgzN30.ulRBJaBCmPw4v_o949LyVakg6sYmwtQgaWJDCDmYX7o";
 
+// Get the current site URL dynamically
+const getSiteUrl = () => {
+  let url = window.location.origin;
+  // If we're on localhost but the URL includes a port, ensure we're not using localhost:3000
+  if (url.includes('localhost')) {
+    url = `${window.location.protocol}//${window.location.host}`;
+  }
+  return url;
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    storage: localStorage,
+    // Set the redirect URL to the current site
+    redirectTo: `${getSiteUrl()}/journal`
+  }
+});
