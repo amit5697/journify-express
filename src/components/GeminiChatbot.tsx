@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,8 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 
 interface Message {
   id: string;
@@ -45,7 +46,6 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  // Fetch journal entries when chatbot is opened
   useEffect(() => {
     if (isOpen) {
       fetchJournalEntries();
@@ -75,7 +75,6 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
     }
   };
   
-  // Add initial welcome message
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
@@ -89,12 +88,10 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
     }
   }, [messages, context]);
   
-  // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  // Focus input when chat is opened
   useEffect(() => {
     if (isOpen && !isMinimized) {
       inputRef.current?.focus();
@@ -121,7 +118,6 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
     }
   };
 
-  // Format journal entries for prompt
   const formatJournalEntriesForPrompt = () => {
     if (!journalEntries || journalEntries.length === 0) {
       return "No journal entries available.";
@@ -141,13 +137,11 @@ Productivity Level: ${entry.productivity}/10
     
     if (!input.trim()) return;
     
-    // Check for API key
     if (!apiKey || apiKey === "YOUR_DEFAULT_API_KEY") {
       setIsApiKeyDialogOpen(true);
       return;
     }
     
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       content: input,
@@ -160,11 +154,9 @@ Productivity Level: ${entry.productivity}/10
     setIsTyping(true);
     
     try {
-      // Prepare journal context for the prompt
       const journalContext = formatJournalEntriesForPrompt();
       const today = format(new Date(), 'yyyy-MM-dd');
       
-      // Call Gemini API with the updated model name
       const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
         method: 'POST',
         headers: {
@@ -183,7 +175,9 @@ ${journalContext}
 
 Today's date is ${today}.
 
-Please respond to the following message, referencing relevant journal entries if applicable: ${input}`
+Please respond to the following message, referencing relevant journal entries if applicable: ${input}
+
+IMPORTANT: Format your response using Markdown syntax (including ** for bold, * for italic, # for headers, etc). You can use bullet points with * and numbered lists too.`
                 }
               ]
             }
@@ -201,7 +195,6 @@ Please respond to the following message, referencing relevant journal entries if
         throw new Error(data.error?.message || 'Failed to get response from Gemini API');
       }
       
-      // Add assistant response
       const assistantMessage: Message = {
         id: Date.now().toString(),
         content: data.candidates[0].content.parts[0].text || 'I couldn\'t process your request. Please try again.',
@@ -213,7 +206,6 @@ Please respond to the following message, referencing relevant journal entries if
     } catch (error: any) {
       console.error('Gemini API error:', error);
       
-      // Add error message
       const errorMessage: Message = {
         id: Date.now().toString(),
         content: error.message || 'Something went wrong. Please try again later.',
@@ -240,7 +232,6 @@ Please respond to the following message, referencing relevant journal entries if
   return (
     <>
       <div className="fixed bottom-4 right-4 z-50">
-        {/* Chatbot Button */}
         {!isOpen && (
           <Button
             onClick={toggleChat}
@@ -251,7 +242,6 @@ Please respond to the following message, referencing relevant journal entries if
           </Button>
         )}
         
-        {/* Chatbot Window */}
         {isOpen && (
           <Card className={cn(
             "transition-all duration-300 shadow-xl border",
@@ -317,8 +307,14 @@ Please respond to the following message, referencing relevant journal entries if
                             {formatTime(message.timestamp)}
                           </span>
                         </div>
-                        <div className="text-sm whitespace-pre-wrap">
-                          {message.content}
+                        <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                          {message.role === "assistant" ? (
+                            <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                              {message.content}
+                            </ReactMarkdown>
+                          ) : (
+                            message.content
+                          )}
                         </div>
                       </div>
                     ))}
@@ -360,7 +356,6 @@ Please respond to the following message, referencing relevant journal entries if
         )}
       </div>
 
-      {/* API Key Dialog */}
       <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
