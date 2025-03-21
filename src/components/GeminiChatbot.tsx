@@ -8,12 +8,21 @@ import { Bot, Send, User, X, Minimize, Maximize, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+}
+
+interface JournalEntry {
+  date: string;
+  content: string;
+  energy: number;
+  productivity: number;
 }
 
 interface ChatbotProps {
@@ -31,9 +40,40 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
   const [apiKey, setApiKey] = useState<string | null>(localStorage.getItem('gemini_api_key') || GEMINI_API_KEY);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [tempApiKey, setTempApiKey] = useState('');
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Fetch journal entries when chatbot is opened
+  useEffect(() => {
+    if (isOpen) {
+      fetchJournalEntries();
+    }
+  }, [isOpen]);
+  
+  const fetchJournalEntries = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .select('date, content, energy, productivity')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(5);
+      
+      if (error) {
+        console.error('Error fetching journal entries:', error);
+      } else {
+        setJournalEntries(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching journal entries:', error);
+    }
+  };
   
   // Add initial welcome message
   useEffect(() => {
@@ -80,6 +120,21 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
       toast.error('Please enter a valid API key');
     }
   };
+
+  // Format journal entries for prompt
+  const formatJournalEntriesForPrompt = () => {
+    if (!journalEntries || journalEntries.length === 0) {
+      return "No journal entries available.";
+    }
+    
+    return journalEntries.map(entry => {
+      return `Date: ${entry.date}
+Content: ${entry.content}
+Energy Level: ${entry.energy}/10
+Productivity Level: ${entry.productivity}/10
+---`;
+    }).join("\n");
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +160,10 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
     setIsTyping(true);
     
     try {
+      // Prepare journal context for the prompt
+      const journalContext = formatJournalEntriesForPrompt();
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
       // Call Gemini API with the updated model name
       const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
         method: 'POST',
@@ -117,7 +176,14 @@ const GeminiChatbot: React.FC<ChatbotProps> = ({ context = "general assistance" 
             {
               parts: [
                 {
-                  text: `You are a helpful assistant focused on ${context}. Respond to the following message: ${input}`
+                  text: `You are a helpful assistant focused on ${context}. 
+                  
+Here are the user's recent journal entries:
+${journalContext}
+
+Today's date is ${today}.
+
+Please respond to the following message, referencing relevant journal entries if applicable: ${input}`
                 }
               ]
             }
